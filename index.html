@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -12,6 +11,8 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     <!-- Babel CDN for JSX parsing in browser -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- jsPDF for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- FontAwesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts -->
@@ -63,9 +64,8 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState } = React;
 
-        // Criteria Rubric Items Definition
         const RUBRIC_CRITERIA = [
             {
                 id: 1,
@@ -95,7 +95,7 @@
             {
                 id: 6,
                 title: "06  Seguridad y Control de Cisternas",
-                description: " Tiene equipo de seguridad, conoce las normas de seguridad, conoce medición de tanques y protocolos de emergencia."
+                description: "Tiene equipo de seguridad, conoce las normas de seguridad, conoce medición de tanques y protocolos de emergencia."
             },
             {
                 id: 7,
@@ -109,50 +109,39 @@
             }
         ];
 
-        // Level Helpers
         const getLevelBadge = (score, criteriaCount) => {
-            if (criteriaCount === 0) return { label: 'Sin evaluar', bg: 'bg-slate-100', text: 'text-slate-600', color: 'slate' };
+            if (criteriaCount === 0) return { label: 'Sin evaluar', bg: 'bg-slate-100', text: 'text-slate-600' };
             const avg = score / 8;
-            if (avg >= 3.5) return { label: 'Excelente', bg: 'bg-emerald-100', text: 'text-emerald-800', color: 'emerald' };
-            if (avg >= 2.5) return { label: 'Competente', bg: 'bg-green-100', text: 'text-green-800', color: 'green' };
-            if (avg >= 1.5) return { label: 'En Desarrollo', bg: 'bg-amber-100', text: 'text-amber-800', color: 'amber' };
-            return { label: 'Necesita Mejora', bg: 'bg-rose-100', text: 'text-rose-800', color: 'rose' };
+            if (avg >= 3.5) return { label: 'Excelente', bg: 'bg-emerald-100', text: 'text-emerald-800' };
+            if (avg >= 2.5) return { label: 'Competente', bg: 'bg-green-100', text: 'text-green-800' };
+            if (avg >= 1.5) return { label: 'En Desarrollo', bg: 'bg-amber-100', text: 'text-amber-800' };
+            return { label: 'Necesita Mejora', bg: 'bg-rose-100', text: 'text-rose-800' };
         };
 
         function App() {
-            // General Station Data
             const [stationData, setStationData] = useState({
                 stationName: '',
                 coachName: '',
                 evaluationDate: new Date().toISOString().split('T')[0]
             });
 
-            // Pisteros List
             const [pisteros, setPisteros] = useState([
                 {
                     id: 1,
                     name: '',
-                    scores: {}, // { 1: score, 2: score, ... }
+                    scores: {},
                     coachNotes: ''
                 }
             ]);
 
-            // Station Observations
             const [stationObs, setStationObs] = useState({
                 general: '',
                 maintenance: '',
                 security: ''
             });
 
-            // Handlers
             const handleAddPistero = () => {
-                const newPistero = {
-                    id: Date.now(),
-                    name: '',
-                    scores: {},
-                    coachNotes: ''
-                };
-                setPisteros([...pisteros, newPistero]);
+                setPisteros([...pisteros, { id: Date.now(), name: '', scores: {}, coachNotes: '' }]);
             };
 
             const handleRemovePistero = (id) => {
@@ -167,10 +156,7 @@
             const handleScoreChange = (pisteroId, criteriaId, score) => {
                 setPisteros(pisteros.map(p => {
                     if (p.id === pisteroId) {
-                        return {
-                            ...p,
-                            scores: { ...p.scores, [criteriaId]: score }
-                        };
+                        return { ...p, scores: { ...p.scores, [criteriaId]: score } };
                     }
                     return p;
                 }));
@@ -180,26 +166,210 @@
                 setPisteros(pisteros.map(p => p.id === pisteroId ? { ...p, coachNotes } : p));
             };
 
-            // Global Calculations
             const calculatePisteroTotal = (scores) => {
                 return Object.values(scores).reduce((a, b) => a + Number(b), 0);
             };
 
             const totalEvaluatedPisteros = pisteros.filter(p => Object.keys(p.scores).length > 0).length;
-            
             const globalTotalScore = pisteros.reduce((acc, p) => acc + calculatePisteroTotal(p.scores), 0);
             const globalAvgScore = pisteros.length > 0 ? (globalTotalScore / pisteros.length) : 0;
             const globalPercentage = ((globalAvgScore / 32) * 100).toFixed(1);
 
-            const handlePrintPDF = () => {
-                window.print();
+            const handleGeneratePDF = () => {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('p', 'mm', 'a4');
+
+                const estacion = stationData.stationName || "Estación sin nombre";
+                const evaluador = stationData.coachName || "Sin especificar";
+                const fecha = stationData.evaluationDate || "Sin fecha";
+                const obsGral = stationObs.general || "Sin observaciones registradas.";
+                const obsMant = stationObs.maintenance || "Sin observaciones registradas.";
+                const obsSeg = stationObs.security || "Sin observaciones registradas.";
+
+                let totalSumaGral = 0;
+                let totalMaxGral = pisteros.length * 32;
+                pisteros.forEach(p => {
+                    Object.values(p.scores).forEach(v => { if (v > 0) totalSumaGral += Number(v); });
+                });
+                let promedioGral = pisteros.length > 0 ? (totalSumaGral / pisteros.length).toFixed(1) : 0;
+                let porcGral = totalMaxGral > 0 ? ((totalSumaGral / totalMaxGral) * 100).toFixed(1) : 0;
+
+                let nivelGral = "NECESITA MEJORA";
+                if (porcGral >= 85) nivelGral = "EXCELENTE";
+                else if (porcGral >= 70) nivelGral = "COMPETENTE";
+                else if (porcGral >= 50) nivelGral = "EN DESARROLLO";
+
+                // --- PÁGINA 1 ---
+                doc.setFillColor(227, 24, 55);
+                doc.rect(0, 0, 210, 22, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(10);
+                doc.text("PUMA ENERGY", 14, 14);
+
+                doc.setTextColor(30, 30, 30);
+                doc.setFontSize(14);
+                doc.text("Mentoría Puma Ficha de Evaluación de Estación de Servicio", 14, 32);
+
+                doc.setFontSize(10);
+                doc.setFont("helvetica", "bold");
+                doc.text("DATOS GENERALES DE LA EVALUACIÓN", 14, 42);
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(9);
+                doc.text(`Estación de Servicio: ${estacion}`, 14, 49);
+                doc.text(`Coach / Evaluador: ${evaluador}`, 14, 55);
+                doc.text(`Fecha de Evaluación: ${fecha}`, 14, 61);
+
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(10);
+                doc.text("RESULTADO GLOBAL DE LA ESTACIÓN", 14, 71);
+                doc.setFillColor(0, 122, 61);
+                doc.roundedRect(14, 75, 182, 20, 2, 2, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(11);
+                doc.text(`PUNTUACIÓN PROMEDIO: ${promedioGral} / 32 (${porcGral}%) - ${nivelGral}`, 20, 87);
+
+                doc.setTextColor(30, 30, 30);
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(10);
+                doc.text("RESUMEN DE PISTEROS", 14, 105);
+
+                let startY = 111;
+                doc.setFillColor(240, 240, 240);
+                doc.rect(14, startY, 182, 8, 'F');
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(8);
+                doc.text("#", 18, startY + 5);
+                doc.text("Pistero", 30, startY + 5);
+                doc.text("Puntaje", 110, startY + 5);
+                doc.text("%", 135, startY + 5);
+                doc.text("Nivel", 165, startY + 5);
+
+                startY += 8;
+                doc.setFont("helvetica", "normal");
+                pisteros.forEach((p, idx) => {
+                    let sumaP = calculatePisteroTotal(p.scores);
+                    let pPorc = ((sumaP / 32) * 100).toFixed(1);
+                    let pNivel = pPorc >= 85 ? "Excelente" : pPorc >= 70 ? "Competente" : pPorc >= 50 ? "En Desarrollo" : "Necesita Mejora";
+                    let nomP = p.name.trim() || `Pistero ${idx + 1}`;
+
+                    doc.text(`${idx + 1}`, 18, startY + 5);
+                    doc.text(nomP, 30, startY + 5);
+                    doc.text(`${sumaP}/32`, 110, startY + 5);
+                    doc.text(`${pPorc}%`, 135, startY + 5);
+                    doc.text(pNivel, 165, startY + 5);
+                    startY += 8;
+                });
+
+                startY += 6;
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(10);
+                doc.text("DETALLE DE RÚBRICA POR CRITERIO (ESCALA 1 A 4)", 14, startY);
+                startY += 6;
+
+                doc.setFillColor(240, 240, 240);
+                doc.rect(14, startY, 182, 8, 'F');
+                doc.setFontSize(8);
+                doc.text("Criterio", 18, startY + 5);
+                pisteros.forEach((p, idx) => {
+                    doc.text(`P${idx + 1}`, 150 + (idx * 12), startY + 5);
+                });
+
+                startY += 8;
+                doc.setFont("helvetica", "normal");
+                RUBRIC_CRITERIA.forEach(c => {
+                    doc.text(`${c.id}. ${c.title.substring(2).trim().substring(0, 42)}`, 18, startY + 5);
+                    pisteros.forEach((p, idx) => {
+                        let val = p.scores[c.id] || 0;
+                        doc.text(`${val}`, 152 + (idx * 12), startY + 5);
+                    });
+                    startY += 7;
+                });
+
+                doc.setFontSize(7);
+                doc.setTextColor(120, 120, 120);
+                doc.text("1 = Necesita Mejora | 2 = En Desarrollo | 3 = Competente | 4 = Excelente", 14, startY + 6);
+                doc.text("Mentoría Puma · Puma Energy", 14, 285);
+                doc.text("Página 1 de 2", 185, 285, { align: "right" });
+
+                // --- PÁGINA 2 ---
+                doc.addPage();
+                doc.setFillColor(227, 24, 55);
+                doc.rect(0, 0, 210, 22, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(10);
+                doc.text("PUMA ENERGY", 14, 14);
+
+                doc.setTextColor(30, 30, 30);
+                doc.setFontSize(12);
+                doc.text("OBSERVACIONES Y COMPROMISOS DEL COACH", 14, 32);
+
+                startY = 38;
+                doc.setFillColor(240, 240, 240);
+                doc.rect(14, startY, 182, 8, 'F');
+                doc.setFontSize(8);
+                doc.text("Pistero", 18, startY + 5);
+                doc.text("Observaciones / Compromisos", 60, startY + 5);
+
+                startY += 8;
+                doc.setFont("helvetica", "normal");
+                pisteros.forEach((p, idx) => {
+                    let nomP = p.name.trim() || `Pistero ${idx + 1}`;
+                    let obsP = p.coachNotes.trim() || "Sin observaciones registradas.";
+                    doc.text(nomP, 18, startY + 5);
+                    doc.text(obsP, 60, startY + 5, { maxWidth: 130 });
+                    startY += 12;
+                });
+
+                startY += 6;
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(12);
+                doc.text("OBSERVACIONES FINALES DE LA ESTACIÓN", 14, startY);
+                
+                startY += 6;
+                doc.setFontSize(9);
+                doc.text("Observaciones Generales de la Estación:", 14, startY);
+                doc.setFont("helvetica", "normal");
+                doc.text(obsGral, 14, startY + 5, { maxWidth: 182 });
+
+                startY += 16;
+                doc.setFont("helvetica", "bold");
+                doc.text("Mantenimiento:", 14, startY);
+                doc.setFont("helvetica", "normal");
+                doc.text(obsMant, 14, startY + 5, { maxWidth: 182 });
+
+                startY += 16;
+                doc.setFont("helvetica", "bold");
+                doc.text("Seguridad:", 14, startY);
+                doc.setFont("helvetica", "normal");
+                doc.text(obsSeg, 14, startY + 5, { maxWidth: 182 });
+
+                startY += 25;
+                doc.setFont("helvetica", "bold");
+                doc.text("FIRMAS DE CONFORMIDAD", 14, startY);
+
+                startY += 25;
+                doc.line(14, startY, 90, startY);
+                doc.line(120, startY, 196, startY);
+
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(8);
+                doc.text("Coach / Evaluador", 14, startY + 5);
+                doc.text("Nombre y firma", 14, startY + 9);
+
+                doc.text("Gerente / Administrador de Estación", 120, startY + 5);
+                doc.text("Nombre y firma", 120, startY + 9);
+
+                doc.text("Mentoría Puma · Puma Energy", 14, 285);
+                doc.text("Página 2 de 2", 185, 285, { align: "right" });
+
+                doc.save(`Reporte_Evaluacion_${estacion.replace(/\s+/g, '_')}.pdf`);
             };
 
             return (
                 <div className="min-h-screen pb-12">
-                    {/* Header Banner */}
                     <div className="bg-pumaRed text-white relative overflow-hidden pb-8 pt-6 px-4 shadow-md">
-                        {/* Geometric Circle Details */}
                         <div className="absolute top-[-20px] right-[-30px] w-48 h-48 rounded-full border-[18px] border-amber-900/20 pointer-events-none"></div>
                         <div className="absolute bottom-[-50px] right-[20px] w-64 h-64 rounded-full border-[24px] border-amber-900/10 pointer-events-none"></div>
                         
@@ -212,89 +382,69 @@
                                 Mentoría Puma
                             </h1>
                             <p className="text-white/90 text-sm md:text-base font-medium flex items-center gap-2">
-                                <i className="fa-regular fa-[#f0f0f0] fa-clipboard-check text-lg"></i>
+                                <i className="fa-regular fa-clipboard-check text-lg"></i>
                                 Evaluación y auditoría de estaciones de servicio
                             </p>
                         </div>
                     </div>
 
-                    {/* Main Container */}
                     <div className="max-w-xl mx-auto px-4 -mt-3 relative z-10 space-y-6">
 
-                        {/* SECTION 1: Datos de la Estación */}
+                        {/* SECTION 1 */}
                         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden print-card">
                             <div className="p-5 border-b border-slate-100 flex items-start gap-3">
-                                <span className="w-7 h-7 rounded-lg bg-pumaGreen text-white font-bold flex items-center justify-center text-sm shrink-0">
-                                    1
-                                </span>
+                                <span className="w-7 h-7 rounded-lg bg-pumaGreen text-white font-bold flex items-center justify-center text-sm shrink-0">1</span>
                                 <div>
-                                    <h2 className="text-lg font-bold text-slate-800 leading-tight">
-                                        Datos de la Estación
-                                    </h2>
-                                    <p className="text-xs text-slate-500 mt-0.5">
-                                        Información general de la evaluación.
-                                    </p>
+                                    <h2 className="text-lg font-bold text-slate-800 leading-tight">Datos de la Estación</h2>
+                                    <p className="text-xs text-slate-500 mt-0.5">Información general de la evaluación.</p>
                                 </div>
                             </div>
                             <div className="p-5 space-y-4">
                                 <div>
-                                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                                        Nombre de la Estación de Servicio
-                                    </label>
+                                    <label className="block text-xs font-semibold text-slate-700 mb-1">Nombre de la Estación de Servicio</label>
                                     <input 
                                         type="text"
                                         placeholder="Ej. Puma Las Américas"
                                         value={stationData.stationName}
                                         onChange={(e) => setStationData({...stationData, stationName: e.target.value})}
-                                        className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pumaGreen focus:border-transparent transition"
+                                        className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pumaGreen transition"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                                        Nombre del Coach / Evaluador
-                                    </label>
+                                    <label className="block text-xs font-semibold text-slate-700 mb-1">Nombre del Coach / Evaluador</label>
                                     <input 
                                         type="text"
                                         placeholder="Nombre completo"
                                         value={stationData.coachName}
                                         onChange={(e) => setStationData({...stationData, coachName: e.target.value})}
-                                        className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pumaGreen focus:border-transparent transition"
+                                        className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pumaGreen transition"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                                        Fecha de Evaluación
-                                    </label>
+                                    <label className="block text-xs font-semibold text-slate-700 mb-1">Fecha de Evaluación</label>
                                     <input 
                                         type="date"
                                         value={stationData.evaluationDate}
                                         onChange={(e) => setStationData({...stationData, evaluationDate: e.target.value})}
-                                        className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pumaGreen focus:border-transparent transition"
+                                        className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pumaGreen transition"
                                     />
                                 </div>
                             </div>
                         </div>
 
-                        {/* SECTION 2: Evaluación de Pisteros */}
+                        {/* SECTION 2 */}
                         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden print-card">
                             <div className="p-5 border-b border-slate-100 flex items-start justify-between">
                                 <div className="flex items-start gap-3">
-                                    <span className="w-7 h-7 rounded-lg bg-pumaGreen text-white font-bold flex items-center justify-center text-sm shrink-0">
-                                        2
-                                    </span>
+                                    <span className="w-7 h-7 rounded-lg bg-pumaGreen text-white font-bold flex items-center justify-center text-sm shrink-0">2</span>
                                     <div>
-                                        <h2 className="text-lg font-bold text-slate-800 leading-tight">
-                                            Evaluación de Pisteros
-                                        </h2>
-                                        <p className="text-xs text-slate-500 mt-0.5">
-                                            Califica cada criterio de 1 (Necesita Mejora) a 4 (Excelente).
-                                        </p>
+                                        <h2 className="text-lg font-bold text-slate-800 leading-tight">Evaluación de Pisteros</h2>
+                                        <p className="text-xs text-slate-500 mt-0.5">Califica cada criterio de 1 (Necesita Mejora) a 4 (Excelente).</p>
                                     </div>
                                 </div>
                             </div>
 
                             <div className="p-5 space-y-6">
-                                {/* Top Add Button */}
                                 <button
                                     onClick={handleAddPistero}
                                     type="button"
@@ -304,7 +454,6 @@
                                     Agregar pistero
                                 </button>
 
-                                {/* Pistero Cards */}
                                 {pisteros.map((pistero, index) => {
                                     const totalScore = calculatePisteroTotal(pistero.scores);
                                     const evaluatedCount = Object.keys(pistero.scores).length;
@@ -312,12 +461,9 @@
 
                                     return (
                                         <div key={pistero.id} className="bg-slate-50/70 border border-slate-200 rounded-2xl overflow-hidden print-card">
-                                            {/* Pistero Card Header */}
                                             <div className="p-4 bg-white border-b border-slate-100">
                                                 <div className="flex items-center justify-between gap-2 mb-3">
-                                                    <span className="text-xs font-bold text-slate-700">
-                                                        Nombre del Pistero
-                                                    </span>
+                                                    <span className="text-xs font-bold text-slate-700">Nombre del Pistero</span>
                                                     {pisteros.length > 1 && (
                                                         <button 
                                                             onClick={() => handleRemovePistero(pistero.id)}
@@ -337,16 +483,13 @@
                                                         placeholder="Nombre completo"
                                                         value={pistero.name}
                                                         onChange={(e) => handlePisteroNameChange(pistero.id, e.target.value)}
-                                                        className="w-full px-3.5 py-2 text-sm font-medium rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-pumaGreen focus:border-transparent transition"
+                                                        className="w-full px-3.5 py-2 text-sm font-medium rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-pumaGreen transition"
                                                     />
                                                 </div>
 
-                                                {/* Pistero Individual Score Bar */}
                                                 <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
                                                     <div>
-                                                        <p className="text-[10px] font-bold tracking-wider text-slate-400 uppercase">
-                                                            Total Individual
-                                                        </p>
+                                                        <p className="text-[10px] font-bold tracking-wider text-slate-400 uppercase">Total Individual</p>
                                                         <p className="text-xl font-black text-slate-800">
                                                             {totalScore} <span className="text-sm font-normal text-slate-400">/ 32</span>
                                                         </p>
@@ -357,17 +500,11 @@
                                                 </div>
                                             </div>
 
-                                            {/* Rubric Header */}
                                             <div className="p-4 border-b border-slate-200/60 bg-slate-100/50 flex items-center justify-between">
-                                                <span className="text-[11px] font-extrabold tracking-wider text-slate-500 uppercase">
-                                                    RÚBRICA DE EVALUACIÓN
-                                                </span>
-                                                <span className="text-xs font-semibold text-slate-500">
-                                                    {evaluatedCount} de 8 criterios calificados
-                                                </span>
+                                                <span className="text-[11px] font-extrabold tracking-wider text-slate-500 uppercase">RÚBRICA DE EVALUACIÓN</span>
+                                                <span className="text-xs font-semibold text-slate-500">{evaluatedCount} de 8 criterios calificados</span>
                                             </div>
 
-                                            {/* Criteria Questions */}
                                             <div className="p-4 space-y-6 bg-white">
                                                 {RUBRIC_CRITERIA.map((criterion) => {
                                                     const selectedValue = pistero.scores[criterion.id];
@@ -384,13 +521,12 @@
                                                                 </p>
                                                             </div>
 
-                                                            {/* Rating Scale Buttons */}
                                                             <div className="grid grid-cols-4 gap-2 pt-1">
                                                                 {[
-                                                                    { val: 1, label: "Necesita Mejora" },
-                                                                    { val: 2, label: "En Desarrollo" },
-                                                                    { val: 3, label: "Competente" },
-                                                                    { val: 4, label: "Excelente" }
+                                                                    { val: 1, label: "Necesita Mejora", color: "bg-[#d90429] text-white border-[#d90429]" },
+                                                                    { val: 2, label: "En Desarrollo", color: "bg-[#f59e0b] text-white border-[#f59e0b]" },
+                                                                    { val: 3, label: "Competente", color: "bg-[#10b981] text-white border-[#10b981]" },
+                                                                    { val: 4, label: "Excelente", color: "bg-[#007a3d] text-white border-[#007a3d]" }
                                                                 ].map((btn) => {
                                                                     const isSelected = selectedValue === btn.val;
                                                                     return (
@@ -400,7 +536,7 @@
                                                                             onClick={() => handleScoreChange(pistero.id, criterion.id, btn.val)}
                                                                             className={`py-2 px-1 rounded-xl border text-center transition-all ${
                                                                                 isSelected
-                                                                                    ? 'bg-slate-800 text-white border-slate-800 font-bold shadow-sm'
+                                                                                    ? `${btn.color} font-bold shadow-sm`
                                                                                     : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 font-medium'
                                                                             }`}
                                                                         >
@@ -414,17 +550,14 @@
                                                     );
                                                 })}
 
-                                                {/* Coach Observations per Pistero */}
                                                 <div className="pt-3 border-t border-slate-100">
-                                                    <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                                                        Observaciones / Compromisos del Coach
-                                                    </label>
+                                                    <label className="block text-xs font-bold text-slate-800 mb-1.5">Observaciones / Compromisos del Coach</label>
                                                     <textarea
                                                         rows="3"
                                                         placeholder="Fortalezas observadas, áreas de mejora y compromisos acordados..."
                                                         value={pistero.coachNotes}
                                                         onChange={(e) => handleNotesChange(pistero.id, e.target.value)}
-                                                        className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pumaGreen focus:border-transparent transition"
+                                                        className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pumaGreen transition"
                                                     ></textarea>
                                                 </div>
                                             </div>
@@ -432,7 +565,6 @@
                                     );
                                 })}
 
-                                {/* Bottom Add Button */}
                                 <button
                                     onClick={handleAddPistero}
                                     type="button"
@@ -444,56 +576,44 @@
                             </div>
                         </div>
 
-                        {/* SECTION 3: Observaciones de la Estación */}
+                        {/* SECTION 3 */}
                         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden print-card">
                             <div className="p-5 border-b border-slate-100 flex items-start gap-3">
-                                <span className="w-7 h-7 rounded-lg bg-pumaGreen text-white font-bold flex items-center justify-center text-sm shrink-0">
-                                    3
-                                </span>
+                                <span className="w-7 h-7 rounded-lg bg-pumaGreen text-white font-bold flex items-center justify-center text-sm shrink-0">3</span>
                                 <div>
-                                    <h2 className="text-lg font-bold text-slate-800 leading-tight">
-                                        Observaciones de la Estación
-                                    </h2>
-                                    <p className="text-xs text-slate-500 mt-0.5">
-                                        Hallazgos generales, de mantenimiento y de seguridad.
-                                    </p>
+                                    <h2 className="text-lg font-bold text-slate-800 leading-tight">Observaciones de la Estación</h2>
+                                    <p className="text-xs text-slate-500 mt-0.5">Hallazgos generales, de mantenimiento y de seguridad.</p>
                                 </div>
                             </div>
                             <div className="p-5 space-y-4">
                                 <div>
-                                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                                        Observaciones Generales de la Estación
-                                    </label>
+                                    <label className="block text-xs font-semibold text-slate-700 mb-1">Observaciones Generales de la Estación</label>
                                     <textarea
                                         rows="3"
                                         placeholder="Imagen de la estación, flujo de clientes, clima laboral..."
                                         value={stationObs.general}
                                         onChange={(e) => setStationObs({...stationObs, general: e.target.value})}
-                                        className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pumaGreen focus:border-transparent transition"
+                                        className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pumaGreen transition"
                                     ></textarea>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                                        Mantenimiento
-                                    </label>
+                                    <label className="block text-xs font-semibold text-slate-700 mb-1">Mantenimiento</label>
                                     <textarea
                                         rows="3"
                                         placeholder="Estado de dispensadores, iluminación, baños, señalización..."
                                         value={stationObs.maintenance}
                                         onChange={(e) => setStationObs({...stationObs, maintenance: e.target.value})}
-                                        className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pumaGreen focus:border-transparent transition"
+                                        className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pumaGreen transition"
                                     ></textarea>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                                        Seguridad
-                                    </label>
+                                    <label className="block text-xs font-semibold text-slate-700 mb-1">Seguridad</label>
                                     <textarea
                                         rows="3"
                                         placeholder="Extintores, rutas de evacuación, derrames, EPP, descarga de cisternas..."
                                         value={stationObs.security}
                                         onChange={(e) => setStationObs({...stationObs, security: e.target.value})}
-                                        className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pumaGreen focus:border-transparent transition"
+                                        className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pumaGreen transition"
                                     ></textarea>
                                 </div>
                             </div>
@@ -502,20 +622,13 @@
                         {/* GLOBAL SUMMARY CARD */}
                         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden print-card">
                             <div className="bg-pumaGreen text-white p-4">
-                                <span className="text-[10px] font-bold tracking-widest opacity-80 uppercase block">
-                                    RESULTADO GLOBAL
-                                </span>
-                                <h3 className="text-xl font-extrabold leading-tight">
-                                    Resumen General
-                                </h3>
+                                <span className="text-[10px] font-bold tracking-widest opacity-80 uppercase block">RESULTADO GLOBAL</span>
+                                <h3 className="text-xl font-extrabold leading-tight">Resumen General</h3>
                             </div>
 
                             <div className="p-5 space-y-5">
-                                {/* Score Indicator Box */}
                                 <div className="bg-slate-50 rounded-2xl p-5 text-center border border-slate-100">
-                                    <p className="text-[10px] font-bold tracking-wider text-slate-400 uppercase mb-1">
-                                        PUNTUACIÓN PROMEDIO
-                                    </p>
+                                    <p className="text-[10px] font-bold tracking-wider text-slate-400 uppercase mb-1">PUNTUACIÓN PROMEDIO</p>
                                     <div className="text-4xl font-black text-slate-800 mb-1">
                                         {globalAvgScore.toFixed(0)} <span className="text-xl font-normal text-slate-400">/ 32</span>
                                     </div>
@@ -523,7 +636,6 @@
                                         {globalPercentage}% · {totalEvaluatedPisteros} de {pisteros.length} pistero(s) evaluado(s)
                                     </p>
 
-                                    {/* Overall Status Badge */}
                                     <div className="inline-block">
                                         {(() => {
                                             const globalBadge = getLevelBadge(globalAvgScore, totalEvaluatedPisteros);
@@ -536,56 +648,33 @@
                                     </div>
                                 </div>
 
-                                {/* Pisteros Score List */}
                                 <div>
-                                    <h4 className="text-xs font-bold tracking-wider text-slate-400 uppercase mb-2">
-                                        PISTEROS
-                                    </h4>
+                                    <h4 className="text-xs font-bold tracking-wider text-slate-400 uppercase mb-2">PISTEROS</h4>
                                     <div className="divide-y divide-slate-100 border-t border-b border-slate-100">
                                         {pisteros.map((p, idx) => {
                                             const pScore = calculatePisteroTotal(p.scores);
                                             return (
                                                 <div key={p.id} className="py-2.5 flex items-center justify-between text-sm">
-                                                    <span className="font-semibold text-slate-700">
-                                                        {p.name.trim() || `Pistero ${idx + 1}`}
-                                                    </span>
-                                                    <span className="font-bold text-slate-800">
-                                                        {pScore}/32
-                                                    </span>
+                                                    <span className="font-semibold text-slate-700">{p.name.trim() || `Pistero ${idx + 1}`}</span>
+                                                    <span className="font-bold text-slate-800">{pScore}/32</span>
                                                 </div>
                                             );
                                         })}
                                     </div>
                                 </div>
 
-                                {/* Scale Guide */}
                                 <div className="pt-2">
-                                    <h4 className="text-[10px] font-bold tracking-wider text-slate-400 uppercase mb-2">
-                                        ESCALA DE NIVELES
-                                    </h4>
+                                    <h4 className="text-[10px] font-bold tracking-wider text-slate-400 uppercase mb-2">ESCALA DE NIVELES</h4>
                                     <div className="grid grid-cols-2 gap-2 text-xs font-medium text-slate-600">
-                                        <div className="flex items-center gap-2">
-                                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0"></span>
-                                            <span>4 · Excelente</span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <span className="w-2.5 h-2.5 rounded-full bg-green-500 shrink-0"></span>
-                                            <span>3 · Competente</span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0"></span>
-                                            <span>2 · En Desarrollo</span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0"></span>
-                                            <span>1 · Necesita Mejora</span>
-                                        </div>
+                                        <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0"></span><span>4 · Excelente</span></div>
+                                        <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-green-500 shrink-0"></span><span>3 · Competente</span></div>
+                                        <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0"></span><span>2 · En Desarrollo</span></div>
+                                        <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0"></span><span>1 · Necesita Mejora</span></div>
                                     </div>
                                 </div>
 
-                                {/* Generate PDF Button */}
                                 <button
-                                    onClick={handlePrintPDF}
+                                    onClick={handleGeneratePDF}
                                     type="button"
                                     className="w-full py-3.5 bg-pumaRed hover:bg-pumaDarkRed text-white font-extrabold text-sm rounded-xl flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition active:scale-[0.99] no-print"
                                 >
@@ -595,11 +684,8 @@
                             </div>
                         </div>
 
-                        {/* Footer */}
                         <div className="text-center pt-4 pb-2">
-                            <p className="text-xs text-slate-400 font-medium">
-                                Mentoría Puma · Puma Energy
-                            </p>
+                            <p className="text-xs text-slate-400 font-medium">Mentoría Puma · Puma Energy</p>
                         </div>
 
                     </div>
@@ -611,4 +697,3 @@
     </script>
 </body>
 </html>
-```
