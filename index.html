@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -16,7 +17,7 @@
     <!-- FontAwesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
     <script>
         tailwind.config = {
@@ -109,11 +110,56 @@
             }
         ];
 
-        const getLevelBadgeFromPercentage = (percentage) => {
-            if (percentage === 100) return { label: 'Excelente', bg: 'bg-[#005e2f]', text: 'text-white' }; // Verde oscuro exacto 100%
-            if (percentage > 89) return { label: 'Competente', bg: 'bg-[#e6f4ed] border border-[#007a3d]', text: 'text-[#007a3d]' }; // Verde claro
-            if (percentage > 79) return { label: 'En desarrollo', bg: 'bg-amber-100', text: 'text-amber-800' }; // Amarillo
-            return { label: 'Necesita Mejora', bg: 'bg-rose-100', text: 'text-rose-800' }; // Rojo
+        // Función para obtener la configuración de nivel, colores de UI y PDF según el porcentaje exacto
+        const getRatingLevelConfig = (percentage) => {
+            if (percentage === 100) {
+                return {
+                    label: 'Excelente',
+                    // UI Tailwind classes
+                    containerClass: 'bg-[#005e2f] text-white border border-[#004221]',
+                    badgeClass: 'bg-white text-[#005e2f]',
+                    textClass: 'text-white',
+                    percentClass: 'text-amber-300 font-black',
+                    // PDF Color Array [r, g, b]
+                    pdfBgRGB: [0, 94, 47], // Verde Oscuro
+                    pdfTextRGB: [255, 255, 255],
+                    pdfAccentRGB: [255, 215, 0]
+                };
+            }
+            if (percentage > 89) {
+                return {
+                    label: 'Competente',
+                    containerClass: 'bg-[#e6f4ed] text-[#007a3d] border-2 border-[#007a3d]',
+                    badgeClass: 'bg-[#007a3d] text-white',
+                    textClass: 'text-[#005e2f]',
+                    percentClass: 'text-[#007a3d] font-black',
+                    pdfBgRGB: [230, 244, 237], // Verde Claro
+                    pdfTextRGB: [0, 94, 47],
+                    pdfAccentRGB: [0, 122, 61]
+                };
+            }
+            if (percentage > 79) {
+                return {
+                    label: 'En desarrollo',
+                    containerClass: 'bg-amber-100 text-amber-900 border-2 border-amber-400',
+                    badgeClass: 'bg-amber-500 text-white',
+                    textClass: 'text-amber-900',
+                    percentClass: 'text-amber-700 font-black',
+                    pdfBgRGB: [254, 243, 199], // Amarillo Claro
+                    pdfTextRGB: [120, 53, 15],
+                    pdfAccentRGB: [180, 83, 9]
+                };
+            }
+            return {
+                label: 'Necesita Mejora',
+                containerClass: 'bg-rose-100 text-rose-900 border-2 border-rose-400',
+                badgeClass: 'bg-rose-600 text-white',
+                textClass: 'text-rose-900',
+                percentClass: 'text-rose-700 font-black',
+                pdfBgRGB: [254, 226, 226], // Rojo Claro
+                pdfTextRGB: [136, 19, 55],
+                pdfAccentRGB: [225, 29, 72]
+            };
         };
 
         function App() {
@@ -166,6 +212,7 @@
                 setPisteros(pisteros.map(p => p.id === pisteroId ? { ...p, coachNotes } : p));
             };
 
+            // Cálculo individual de pistero excluyendo los N/A
             const calculatePisteroStats = (scores) => {
                 let applicableCount = 0;
                 let obtainedSum = 0;
@@ -183,7 +230,7 @@
                 return { obtainedSum, maxPossible, applicableCount, percentage };
             };
 
-            // Cálculo Global
+            // Cálculo Global acumulado
             let totalObtainedGlobal = 0;
             let totalMaxGlobal = 0;
             let totalApplicableCriteria = 0;
@@ -200,6 +247,7 @@
             });
 
             const globalPercentage = totalMaxGlobal > 0 ? Number(((totalObtainedGlobal / totalMaxGlobal) * 100).toFixed(1)) : 0;
+            const globalRatingConfig = getRatingLevelConfig(globalPercentage);
 
             const handleGeneratePDF = () => {
                 const { jsPDF } = window.jspdf;
@@ -212,12 +260,10 @@
                 const obsGral = stationObs.general || "Sin observaciones registradas.";
                 const obsMant = stationObs.maintenance || "Sin observaciones registradas.";
                 const obsSeg = stationObs.security || "Sin observaciones registradas.";
-                const managerSigner = stationObs.managerSignerName || "Gerente / Encargado";
-
-                let nivelGralObj = getLevelBadgeFromPercentage(globalPercentage);
-                let nivelGralText = nivelGralObj.label.toUpperCase();
+                const managerSigner = stationObs.managerSignerName || supervisor || "Gerente / Encargado";
 
                 // --- PÁGINA 1 ---
+                // Header Puma
                 doc.setFillColor(227, 24, 55);
                 doc.rect(0, 0, 210, 22, 'F');
                 doc.setTextColor(255, 255, 255);
@@ -227,8 +273,9 @@
 
                 doc.setTextColor(30, 30, 30);
                 doc.setFontSize(14);
-                doc.text("Mentoría Puma Ficha de Evaluación de Estación de Servicio", 14, 32);
+                doc.text("Mentoría Puma · Ficha de Evaluación de Estación", 14, 32);
 
+                // Datos generales
                 doc.setFontSize(10);
                 doc.setFont("helvetica", "bold");
                 doc.text("DATOS GENERALES DE LA EVALUACIÓN", 14, 42);
@@ -239,43 +286,62 @@
                 doc.text(`Supervisor / Encargado: ${supervisor}`, 14, 61);
                 doc.text(`Fecha de Evaluación: ${fecha}`, 14, 67);
 
+                // BANNER DINÁMICO DE RESULTADO GLOBAL (Cinta según calificación)
                 doc.setFont("helvetica", "bold");
                 doc.setFontSize(10);
                 doc.text("RESULTADO GLOBAL DE LA ESTACIÓN", 14, 77);
-                doc.setFillColor(0, 94, 47);
-                doc.roundedRect(14, 81, 182, 20, 2, 2, 'F');
-                doc.setTextColor(255, 255, 255);
-                doc.setFontSize(11);
-                doc.text(`RESULTADO GLOBAL: ${globalPercentage}% (${totalObtainedGlobal} / ${totalMaxGlobal} pts) - ${nivelGralText}`, 20, 93);
 
+                const bgRGB = globalRatingConfig.pdfBgRGB;
+                const textRGB = globalRatingConfig.pdfTextRGB;
+
+                doc.setFillColor(bgRGB[0], bgRGB[1], bgRGB[2]);
+                doc.roundedRect(14, 81, 182, 28, 3, 3, 'F');
+                
+                // Texto de Nivel
+                doc.setTextColor(textRGB[0], textRGB[1], textRGB[2]);
+                doc.setFontSize(11);
+                doc.setFont("helvetica", "bold");
+                doc.text(`NIVEL GLOBAL: ${globalRatingConfig.label.toUpperCase()}`, 20, 91);
+
+                // PORCENTAJE ENORME
+                doc.setFontSize(22);
+                doc.setFont("helvetica", "bold");
+                doc.text(`${globalPercentage}%`, 20, 102);
+
+                // Detalle de puntos al lado del porcentaje
+                doc.setFontSize(9);
+                doc.setFont("helvetica", "normal");
+                doc.text(`(${totalObtainedGlobal} de ${totalMaxGlobal} pts posibles - ${evaluatedPisterosCount} pisteros evaluados)`, 75, 101);
+
+                // Resumen de Pisteros
                 doc.setTextColor(30, 30, 30);
                 doc.setFont("helvetica", "bold");
                 doc.setFontSize(10);
-                doc.text("RESUMEN DE PISTEROS", 14, 110);
+                doc.text("RESUMEN DE PISTEROS", 14, 118);
 
-                let startY = 116;
+                let startY = 123;
                 doc.setFillColor(240, 240, 240);
                 doc.rect(14, startY, 182, 8, 'F');
                 doc.setFont("helvetica", "bold");
                 doc.setFontSize(8);
                 doc.text("#", 18, startY + 5);
                 doc.text("Pistero", 30, startY + 5);
-                doc.text("Puntaje", 110, startY + 5);
-                doc.text("%", 135, startY + 5);
-                doc.text("Nivel", 160, startY + 5);
+                doc.text("Puntaje Obt.", 110, startY + 5);
+                doc.text("% Ajustado", 140, startY + 5);
+                doc.text("Nivel", 170, startY + 5);
 
                 startY += 8;
                 doc.setFont("helvetica", "normal");
                 pisteros.forEach((p, idx) => {
                     let stats = calculatePisteroStats(p.scores);
-                    let pNivelObj = getLevelBadgeFromPercentage(stats.percentage);
+                    let pRatingConfig = getRatingLevelConfig(stats.percentage);
                     let nomP = p.name.trim() || `Pistero ${idx + 1}`;
 
                     doc.text(`${idx + 1}`, 18, startY + 5);
                     doc.text(nomP, 30, startY + 5);
-                    doc.text(`${stats.obtainedSum}/${stats.maxPossible}`, 110, startY + 5);
-                    doc.text(`${stats.percentage}%`, 135, startY + 5);
-                    doc.text(pNivelObj.label, 160, startY + 5);
+                    doc.text(`${stats.obtainedSum} / ${stats.maxPossible}`, 110, startY + 5);
+                    doc.text(`${stats.percentage}%`, 140, startY + 5);
+                    doc.text(pRatingConfig.label, 170, startY + 5);
                     startY += 8;
                 });
 
@@ -307,7 +373,7 @@
 
                 doc.setFontSize(7);
                 doc.setTextColor(120, 120, 120);
-                doc.text("1 = Necesita Mejora | 2 = En desarrollo | 3 = Competente | 4 = Excelente | N/A = No Aplica", 14, startY + 6);
+                doc.text("Escala: 1 = Necesita Mejora | 2 = En desarrollo | 3 = Competente | 4 = Excelente | N/A = No Aplica (no resta al total)", 14, startY + 6);
                 doc.text("Mentoría Puma · Puma Energy", 14, 285);
                 doc.text("Página 1 de 2", 185, 285, { align: "right" });
 
@@ -374,10 +440,10 @@
 
                 doc.setFont("helvetica", "normal");
                 doc.setFontSize(8);
-                doc.text(`Evaluador: ${evaluador}`, 14, startY + 5);
+                doc.text(`Coach / Evaluador: ${evaluador}`, 14, startY + 5);
                 doc.text("Firma y Sello", 14, startY + 9);
 
-                doc.text(`${managerSigner}`, 120, startY + 5);
+                doc.text(`Encargado / Receptor: ${managerSigner}`, 120, startY + 5);
                 doc.text("Firma digital / Conformidad", 120, startY + 9);
 
                 doc.text("Mentoría Puma · Puma Energy", 14, 285);
@@ -388,6 +454,7 @@
 
             return (
                 <div className="min-h-screen pb-12">
+                    {/* TOP HEADER */}
                     <div className="bg-pumaRed text-white relative overflow-hidden pb-8 pt-6 px-4 shadow-md">
                         <div className="absolute top-[-20px] right-[-30px] w-48 h-48 rounded-full border-[18px] border-amber-900/20 pointer-events-none"></div>
                         <div className="absolute bottom-[-50px] right-[20px] w-64 h-64 rounded-full border-[24px] border-amber-900/10 pointer-events-none"></div>
@@ -409,13 +476,13 @@
 
                     <div className="max-w-xl mx-auto px-4 -mt-3 relative z-10 space-y-6">
 
-                        {/* SECTION 1 */}
+                        {/* SECTION 1: DATOS DE LA ESTACIÓN */}
                         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden print-card">
                             <div className="p-5 border-b border-slate-100 flex items-start gap-3">
                                 <span className="w-7 h-7 rounded-lg bg-pumaGreen text-white font-bold flex items-center justify-center text-sm shrink-0">1</span>
                                 <div>
                                     <h2 className="text-lg font-bold text-slate-800 leading-tight">Datos de la Estación</h2>
-                                    <p className="text-xs text-slate-500 mt-0.5">Información general de la evaluación.</p>
+                                    <p className="text-xs text-slate-500 mt-0.5">Información general de la auditoría.</p>
                                 </div>
                             </div>
                             <div className="p-5 space-y-4">
@@ -433,7 +500,7 @@
                                     <label className="block text-xs font-semibold text-slate-700 mb-1">Nombre del Coach / Evaluador</label>
                                     <input 
                                         type="text"
-                                        placeholder="Nombre completo del evaluador"
+                                        placeholder="Nombre del evaluador"
                                         value={stationData.coachName}
                                         onChange={(e) => setStationData({...stationData, coachName: e.target.value})}
                                         className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pumaGreen transition"
@@ -443,7 +510,7 @@
                                     <label className="block text-xs font-semibold text-slate-700 mb-1">Nombre del Supervisor o Encargado</label>
                                     <input 
                                         type="text"
-                                        placeholder="Nombre del supervisor o encargado de estación"
+                                        placeholder="Nombre del supervisor / encargado de turno"
                                         value={stationData.supervisorName}
                                         onChange={(e) => setStationData({...stationData, supervisorName: e.target.value})}
                                         className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pumaGreen transition"
@@ -461,14 +528,14 @@
                             </div>
                         </div>
 
-                        {/* SECTION 2 */}
+                        {/* SECTION 2: EVALUACIÓN DE PISTEROS */}
                         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden print-card">
                             <div className="p-5 border-b border-slate-100 flex items-start justify-between">
                                 <div className="flex items-start gap-3">
                                     <span className="w-7 h-7 rounded-lg bg-pumaGreen text-white font-bold flex items-center justify-center text-sm shrink-0">2</span>
                                     <div>
                                         <h2 className="text-lg font-bold text-slate-800 leading-tight">Evaluación de Pisteros</h2>
-                                        <p className="text-xs text-slate-500 mt-0.5">Califica cada criterio de 1 a 4 o marca N/A si no aplica.</p>
+                                        <p className="text-xs text-slate-500 mt-0.5">Califica de 1 a 4 o marca N/A (No Aplica).</p>
                                     </div>
                                 </div>
                             </div>
@@ -485,7 +552,7 @@
 
                                 {pisteros.map((pistero, index) => {
                                     const stats = calculatePisteroStats(pistero.scores);
-                                    const badge = getLevelBadgeFromPercentage(stats.percentage);
+                                    const pisteroRatingConfig = getRatingLevelConfig(stats.percentage);
 
                                     return (
                                         <div key={pistero.id} className="bg-slate-50/70 border border-slate-200 rounded-2xl overflow-hidden print-card">
@@ -517,20 +584,21 @@
 
                                                 <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
                                                     <div>
-                                                        <p className="text-[10px] font-bold tracking-wider text-slate-400 uppercase">Puntuación Ajustada (N/A excluidos)</p>
+                                                        <p className="text-[10px] font-bold tracking-wider text-slate-400 uppercase">Resultado Individual</p>
                                                         <p className="text-xl font-black text-slate-800">
-                                                            {stats.obtainedSum} <span className="text-sm font-normal text-slate-400">/ {stats.maxPossible} ({stats.percentage}%)</span>
+                                                            <span className="text-pumaRed">{stats.percentage}%</span>
+                                                            <span className="text-xs font-normal text-slate-500 ml-1.5">({stats.obtainedSum}/{stats.maxPossible} pts)</span>
                                                         </p>
                                                     </div>
-                                                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${badge.bg} ${badge.text}`}>
-                                                        {badge.label}
+                                                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${pisteroRatingConfig.badgeClass}`}>
+                                                        {pisteroRatingConfig.label}
                                                     </span>
                                                 </div>
                                             </div>
 
                                             <div className="p-4 border-b border-slate-200/60 bg-slate-100/50 flex items-center justify-between">
                                                 <span className="text-[11px] font-extrabold tracking-wider text-slate-500 uppercase">RÚBRICA DE EVALUACIÓN</span>
-                                                <span className="text-xs font-semibold text-slate-500">{stats.applicableCount} aplicables ({Object.keys(pistero.scores).length} marcados)</span>
+                                                <span className="text-xs font-semibold text-slate-500">{stats.applicableCount} preguntas aplicables</span>
                                             </div>
 
                                             <div className="p-4 space-y-6 bg-white">
@@ -555,7 +623,7 @@
                                                                     { val: 2, label: "Desarrollo", color: "bg-[#f59e0b] text-white border-[#f59e0b]" },
                                                                     { val: 3, label: "Competente", color: "bg-[#10b981] text-white border-[#10b981]" },
                                                                     { val: 4, label: "Excelente", color: "bg-[#007a3d] text-white border-[#007a3d]" },
-                                                                    { val: 'NA', label: "No Aplica", color: "bg-slate-600 text-white border-slate-600" }
+                                                                    { val: 'NA', label: "No Aplica", color: "bg-slate-700 text-white border-slate-700" }
                                                                 ].map((btn) => {
                                                                     const isSelected = selectedValue === btn.val;
                                                                     return (
@@ -583,7 +651,7 @@
                                                     <label className="block text-xs font-bold text-slate-800 mb-1.5">Observaciones / Compromisos del Coach</label>
                                                     <textarea
                                                         rows="3"
-                                                        placeholder="Fortalezas observadas, áreas de mejora y compromisos acordados..."
+                                                        placeholder="Fortalezas observadas, áreas de mejora y compromisos..."
                                                         value={pistero.coachNotes}
                                                         onChange={(e) => handleNotesChange(pistero.id, e.target.value)}
                                                         className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pumaGreen transition"
@@ -605,13 +673,13 @@
                             </div>
                         </div>
 
-                        {/* SECTION 3 */}
+                        {/* SECTION 3: OBSERVACIONES DE LA ESTACIÓN Y FIRMAS */}
                         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden print-card">
                             <div className="p-5 border-b border-slate-100 flex items-start gap-3">
                                 <span className="w-7 h-7 rounded-lg bg-pumaGreen text-white font-bold flex items-center justify-center text-sm shrink-0">3</span>
                                 <div>
                                     <h2 className="text-lg font-bold text-slate-800 leading-tight">Observaciones de la Estación y Firmas</h2>
-                                    <p className="text-xs text-slate-500 mt-0.5">Hallazgos generales, mantenimiento, seguridad y datos de firma.</p>
+                                    <p className="text-xs text-slate-500 mt-0.5">Hallazgos y datos para firma de conformidad.</p>
                                 </div>
                             </div>
                             <div className="p-5 space-y-4">
@@ -639,17 +707,17 @@
                                     <label className="block text-xs font-semibold text-slate-700 mb-1">Seguridad</label>
                                     <textarea
                                         rows="3"
-                                        placeholder="Extintores, rutas de evacuación, derrames, EPP, descarga de cisternas..."
+                                        placeholder="Extintores, rutas de evacuación, EPP, descarga de cisternas..."
                                         value={stationObs.security}
                                         onChange={(e) => setStationObs({...stationObs, security: e.target.value})}
                                         className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pumaGreen transition"
                                     ></textarea>
                                 </div>
                                 <div className="pt-2 border-t border-slate-100">
-                                    <label className="block text-xs font-semibold text-slate-700 mb-1">Nombre para Firma Digital / Encargado Receptor</label>
+                                    <label className="block text-xs font-semibold text-slate-700 mb-1">Nombre del Encargado Receptor (Firma Digital / Validación)</label>
                                     <input 
                                         type="text"
-                                        placeholder="Ej. Juan Pérez (Gerente de Turno / Estación)"
+                                        placeholder="Nombre de quien recibe/valida en estación"
                                         value={stationObs.managerSignerName}
                                         onChange={(e) => setStationObs({...stationObs, managerSignerName: e.target.value})}
                                         className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pumaGreen transition"
@@ -661,41 +729,48 @@
                         {/* GLOBAL SUMMARY CARD */}
                         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden print-card">
                             <div className="bg-pumaGreen text-white p-4">
-                                <span className="text-[10px] font-bold tracking-widest opacity-80 uppercase block">RESULTADO GLOBAL</span>
-                                <h3 className="text-xl font-extrabold leading-tight">Resumen General</h3>
+                                <span className="text-[10px] font-bold tracking-widest opacity-80 uppercase block">INFORME FINAL DE AUDITORÍA</span>
+                                <h3 className="text-xl font-extrabold leading-tight">Resultado Global</h3>
                             </div>
 
                             <div className="p-5 space-y-5">
-                                <div className="bg-slate-50 rounded-2xl p-5 text-center border border-slate-100">
-                                    <p className="text-[10px] font-bold tracking-wider text-slate-400 uppercase mb-1">PORCENTAJE GLOBAL DE LA ESTACIÓN</p>
-                                    <div className="text-4xl font-black text-slate-800 mb-1">
-                                        <span className="text-pumaRed underline decoration-2">{globalPercentage}%</span>
+                                {/* BANNER DE RESULTADO CON COLOR Y TAMAÑO DINÁMICO */}
+                                <div className={`rounded-2xl p-6 text-center shadow-sm transition-all ${globalRatingConfig.containerClass}`}>
+                                    <p className="text-[10px] font-bold tracking-widest uppercase mb-1 opacity-90">
+                                        PUNTUACIÓN GLOBAL DE LA ESTACIÓN
+                                    </p>
+                                    
+                                    {/* PORCENTAJE DESTACADO EN GRANDE */}
+                                    <div className="text-5xl md:text-6xl font-black my-2 tracking-tight">
+                                        {globalPercentage}%
                                     </div>
-                                    <p className="text-xs text-slate-500 font-medium mb-3">
-                                        {totalObtainedGlobal} de {totalMaxGlobal} puntos posibles ({evaluatedPisterosCount} pistero(s) evaluados)
+
+                                    <p className="text-xs font-semibold mb-4 opacity-90">
+                                        Puntaje: {totalObtainedGlobal} / {totalMaxGlobal} pts | {evaluatedPisterosCount} pistero(s) evaluado(s)
                                     </p>
 
                                     <div className="inline-block">
-                                        {(() => {
-                                            const globalBadge = getLevelBadgeFromPercentage(globalPercentage);
-                                            return (
-                                                <span className={`px-4 py-1.5 rounded-full text-xs font-bold ${globalBadge.bg} ${globalBadge.text}`}>
-                                                    {globalBadge.label}
-                                                </span>
-                                            );
-                                        })()}
+                                        <span className={`px-5 py-2 rounded-full text-xs font-black uppercase tracking-wider shadow-sm ${globalRatingConfig.badgeClass}`}>
+                                            NIVEL: {globalRatingConfig.label}
+                                        </span>
                                     </div>
                                 </div>
 
                                 <div>
-                                    <h4 className="text-xs font-bold tracking-wider text-slate-400 uppercase mb-2">PISTEROS</h4>
+                                    <h4 className="text-xs font-bold tracking-wider text-slate-400 uppercase mb-2">RESUMEN POR PISTERO</h4>
                                     <div className="divide-y divide-slate-100 border-t border-b border-slate-100">
                                         {pisteros.map((p, idx) => {
                                             const stats = calculatePisteroStats(p.scores);
+                                            const pRating = getRatingLevelConfig(stats.percentage);
                                             return (
                                                 <div key={p.id} className="py-2.5 flex items-center justify-between text-sm">
                                                     <span className="font-semibold text-slate-700">{p.name.trim() || `Pistero ${idx + 1}`}</span>
-                                                    <span className="font-bold text-slate-800">{stats.percentage}% ({stats.obtainedSum}/{stats.maxPossible})</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-extrabold text-slate-800">{stats.percentage}%</span>
+                                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${pRating.badgeClass}`}>
+                                                            {pRating.label}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             );
                                         })}
@@ -703,22 +778,34 @@
                                 </div>
 
                                 <div className="pt-2">
-                                    <h4 className="text-[10px] font-bold tracking-wider text-slate-400 uppercase mb-2">ESCALA DE NIVELES</h4>
+                                    <h4 className="text-[10px] font-bold tracking-wider text-slate-400 uppercase mb-2">CRITERIOS DE CALIFICACIÓN</h4>
                                     <div className="grid grid-cols-2 gap-2 text-xs font-medium text-slate-600">
-                                        <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#005e2f] shrink-0"></span><span>100% · Excelente</span></div>
-                                        <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0"></span><span>&gt; 89% · Competente</span></div>
-                                        <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0"></span><span>&gt; 79% · En desarrollo</span></div>
-                                        <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0"></span><span>&lt; 80% · Necesita Mejora</span></div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="w-3 h-3 rounded-full bg-[#005e2f] shrink-0"></span>
+                                            <span><strong>100%</strong> · Excelente (Verde Oscuro)</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="w-3 h-3 rounded-full bg-[#007a3d] shrink-0"></span>
+                                            <span><strong>&gt; 89%</strong> · Competente (Verde Claro)</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="w-3 h-3 rounded-full bg-amber-500 shrink-0"></span>
+                                            <span><strong>&gt; 79%</strong> · En desarrollo (Amarillo)</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="w-3 h-3 rounded-full bg-rose-500 shrink-0"></span>
+                                            <span><strong>&lt; 80%</strong> · Necesita Mejora (Rojo)</span>
+                                        </div>
                                     </div>
                                 </div>
 
                                 <button
                                     onClick={handleGeneratePDF}
                                     type="button"
-                                    className="w-full py-3.5 bg-pumaRed hover:bg-pumaDarkRed text-white font-extrabold text-sm rounded-xl flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition active:scale-[0.99] no-print"
+                                    className="w-full py-4 bg-pumaRed hover:bg-pumaDarkRed text-white font-extrabold text-sm rounded-xl flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition active:scale-[0.99] no-print"
                                 >
-                                    <i className="fa-solid fa-file-pdf text-base"></i>
-                                    GENERAR REPORTE PDF
+                                    <i className="fa-solid fa-file-pdf text-lg"></i>
+                                    GENERAR REPORTE PDF COMPLETO
                                 </button>
                             </div>
                         </div>
@@ -736,3 +823,4 @@
     </script>
 </body>
 </html>
+```
