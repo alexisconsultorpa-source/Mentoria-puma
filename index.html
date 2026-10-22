@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mentoría Puma - Evaluación y Auditoría</title>
+    <title>Mentoría Puma - Evaluación Pisteros y Tenderos Super 7</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- React & ReactDOM CDNs -->
@@ -29,6 +29,8 @@
                         pumaGreen: '#007a3d',
                         pumaDarkGreen: '#005e2f',
                         pumaLightGreen: '#e6f4ed',
+                        super7Orange: '#f97316',
+                        super7DarkOrange: '#c2410c'
                     },
                     fontFamily: {
                         sans: ['Inter', 'sans-serif'],
@@ -67,7 +69,8 @@
     <script type="text/babel">
         const { useState } = React;
 
-        const RUBRIC_CRITERIA = [
+        // Rúbrica para Pisteros (Pista)
+        const PISTERO_CRITERIA = [
             {
                 id: 1,
                 title: "01  Imagen y Presentación Personal",
@@ -110,20 +113,66 @@
             }
         ];
 
+        // Rúbrica para Tenderos (Super 7)
+        const TENDERO_CRITERIA = [
+            {
+                id: 1,
+                title: "01  Uniforme Completo y Presentación",
+                description: "Gorra, gafete, camisa a cuadros y pantalón negro bordado con la marca Super 7, limpio y con imagen profesional."
+            },
+            {
+                id: 2,
+                title: "02  Bienvenida y Actitud de Servicio",
+                description: "Recibe al cliente de manera amable, con buena actitud, dándole la bienvenida y recordando el uso de la aplicación Puma Pris."
+            },
+            {
+                id: 3,
+                title: "03  Promoción Puma Pris y Promociones Tienda",
+                description: "Invita a descargar la aplicación y destaca alguna promoción de tienda o Pris al cliente antes de tomar el pedido."
+            },
+            {
+                id: 4,
+                title: "04  Venta Cruzada y Sugerencia",
+                description: "Trata de generar una venta cruzada, recomendando al cliente añadir algún producto complementario a su pedido."
+            },
+            {
+                id: 5,
+                title: "05  Toma de Pedido y Facturación",
+                description: "Toma el pedido del cliente, lo confirma, entrega la factura por su compra y se despide de manera amable invitándolo a volver o tomar asiento."
+            },
+            {
+                id: 6,
+                title: "06  Acumulación de Puntos y Soporte App",
+                description: "Demuestra agilidad en la acumulación de puntos y es capaz de responder las inquietudes del cliente con respecto a la aplicación."
+            },
+            {
+                id: 7,
+                title: "07  Trato Personalizado",
+                description: "Llama al cliente por su nombre durante la atención."
+            },
+            {
+                id: 8,
+                title: "08  Entrega de Pedido",
+                description: "Entrega el pedido al cliente con buena actitud y le repite los detalles de la entrega."
+            },
+            {
+                id: 9,
+                title: "09  Despedida y Agradecimiento",
+                description: "Se despide del cliente de forma amable agradeciendo por su compra e invitándolo a volver."
+            }
+        ];
+
         // Función para obtener la configuración de nivel, colores de UI y PDF según el porcentaje exacto
         const getRatingLevelConfig = (percentage) => {
             if (percentage === 100) {
                 return {
                     label: 'Excelente',
-                    // UI Tailwind classes
                     containerClass: 'bg-[#005e2f] text-white border border-[#004221]',
                     badgeClass: 'bg-white text-[#005e2f]',
                     textClass: 'text-white',
                     percentClass: 'text-amber-300 font-black',
-                    // PDF Color Array [r, g, b]
                     pdfBgRGB: [0, 94, 47], // Verde Oscuro
-                    pdfTextRGB: [255, 255, 255],
-                    pdfAccentRGB: [255, 215, 0]
+                    pdfTextRGB: [255, 255, 255]
                 };
             }
             if (percentage > 89) {
@@ -134,8 +183,7 @@
                     textClass: 'text-[#005e2f]',
                     percentClass: 'text-[#007a3d] font-black',
                     pdfBgRGB: [230, 244, 237], // Verde Claro
-                    pdfTextRGB: [0, 94, 47],
-                    pdfAccentRGB: [0, 122, 61]
+                    pdfTextRGB: [0, 94, 47]
                 };
             }
             if (percentage > 79) {
@@ -146,8 +194,7 @@
                     textClass: 'text-amber-900',
                     percentClass: 'text-amber-700 font-black',
                     pdfBgRGB: [254, 243, 199], // Amarillo Claro
-                    pdfTextRGB: [120, 53, 15],
-                    pdfAccentRGB: [180, 83, 9]
+                    pdfTextRGB: [120, 53, 15]
                 };
             }
             return {
@@ -157,8 +204,7 @@
                 textClass: 'text-rose-900',
                 percentClass: 'text-rose-700 font-black',
                 pdfBgRGB: [254, 226, 226], // Rojo Claro
-                pdfTextRGB: [136, 19, 55],
-                pdfAccentRGB: [225, 29, 72]
+                pdfTextRGB: [136, 19, 55]
             };
         };
 
@@ -170,9 +216,11 @@
                 evaluationDate: new Date().toISOString().split('T')[0]
             });
 
-            const [pisteros, setPisteros] = useState([
+            // Lista de colaboradores evaluados (pisteros y tenderos)
+            const [staffList, setStaffList] = useState([
                 {
                     id: 1,
+                    role: 'PISTERO', // 'PISTERO' | 'TENDERO'
                     name: '',
                     scores: {}, // guarda valores numéricos (1-4) o 'NA'
                     coachNotes: ''
@@ -186,39 +234,43 @@
                 managerSignerName: ''
             });
 
-            const handleAddPistero = () => {
-                setPisteros([...pisteros, { id: Date.now(), name: '', scores: {}, coachNotes: '' }]);
+            const handleAddStaff = (role) => {
+                setStaffList([
+                    ...staffList, 
+                    { id: Date.now(), role, name: '', scores: {}, coachNotes: '' }
+                ]);
             };
 
-            const handleRemovePistero = (id) => {
-                if (pisteros.length === 1) return;
-                setPisteros(pisteros.filter(p => p.id !== id));
+            const handleRemoveStaff = (id) => {
+                if (staffList.length === 1) return;
+                setStaffList(staffList.filter(s => s.id !== id));
             };
 
-            const handlePisteroNameChange = (id, name) => {
-                setPisteros(pisteros.map(p => p.id === id ? { ...p, name } : p));
+            const handleNameChange = (id, name) => {
+                setStaffList(staffList.map(s => s.id === id ? { ...s, name } : s));
             };
 
-            const handleScoreChange = (pisteroId, criteriaId, value) => {
-                setPisteros(pisteros.map(p => {
-                    if (p.id === pisteroId) {
-                        return { ...p, scores: { ...p.scores, [criteriaId]: value } };
+            const handleScoreChange = (staffId, criteriaId, value) => {
+                setStaffList(staffList.map(s => {
+                    if (s.id === staffId) {
+                        return { ...s, scores: { ...s.scores, [criteriaId]: value } };
                     }
-                    return p;
+                    return s;
                 }));
             };
 
-            const handleNotesChange = (pisteroId, coachNotes) => {
-                setPisteros(pisteros.map(p => p.id === pisteroId ? { ...p, coachNotes } : p));
+            const handleNotesChange = (staffId, coachNotes) => {
+                setStaffList(staffList.map(s => s.id === staffId ? { ...s, coachNotes } : s));
             };
 
-            // Cálculo individual de pistero excluyendo los N/A
-            const calculatePisteroStats = (scores) => {
+            // Cálculo individual de colaborador (pistero o tendero)
+            const calculateStaffStats = (staff) => {
+                const criteriaList = staff.role === 'TENDERO' ? TENDERO_CRITERIA : PISTERO_CRITERIA;
                 let applicableCount = 0;
                 let obtainedSum = 0;
 
-                RUBRIC_CRITERIA.forEach(c => {
-                    const val = scores[c.id];
+                criteriaList.forEach(c => {
+                    const val = staff.scores[c.id];
                     if (val !== 'NA' && val !== undefined) {
                         applicableCount++;
                         obtainedSum += Number(val);
@@ -230,25 +282,24 @@
                 return { obtainedSum, maxPossible, applicableCount, percentage };
             };
 
-            // Cálculo Global acumulado
+            // Cálculo Global acumulado (Estación + Tienda Super 7)
             let totalObtainedGlobal = 0;
             let totalMaxGlobal = 0;
-            let totalApplicableCriteria = 0;
-            let evaluatedPisterosCount = 0;
+            let evaluatedStaffCount = 0;
 
-            pisteros.forEach(p => {
-                const stats = calculatePisteroStats(p.scores);
+            staffList.forEach(s => {
+                const stats = calculateStaffStats(s);
                 if (stats.applicableCount > 0) {
-                    evaluatedPisterosCount++;
+                    evaluatedStaffCount++;
                     totalObtainedGlobal += stats.obtainedSum;
                     totalMaxGlobal += stats.maxPossible;
-                    totalApplicableCriteria += stats.applicableCount;
                 }
             });
 
             const globalPercentage = totalMaxGlobal > 0 ? Number(((totalObtainedGlobal / totalMaxGlobal) * 100).toFixed(1)) : 0;
             const globalRatingConfig = getRatingLevelConfig(globalPercentage);
 
+            // Generador de PDF
             const handleGeneratePDF = () => {
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF('p', 'mm', 'a4');
@@ -263,119 +314,133 @@
                 const managerSigner = stationObs.managerSignerName || supervisor || "Gerente / Encargado";
 
                 // --- PÁGINA 1 ---
-                // Header Puma
+                // Header Puma & Super 7
                 doc.setFillColor(227, 24, 55);
                 doc.rect(0, 0, 210, 22, 'F');
                 doc.setTextColor(255, 255, 255);
                 doc.setFont("helvetica", "bold");
                 doc.setFontSize(10);
-                doc.text("PUMA ENERGY", 14, 14);
+                doc.text("PUMA ENERGY  |  SUPER 7", 14, 14);
 
                 doc.setTextColor(30, 30, 30);
-                doc.setFontSize(14);
-                doc.text("Mentoría Puma · Ficha de Evaluación de Estación", 14, 32);
+                doc.setFontSize(13);
+                doc.text("Mentoría Puma · Ficha de Evaluación Estación y Tienda Super 7", 14, 32);
 
                 // Datos generales
-                doc.setFontSize(10);
-                doc.setFont("helvetica", "bold");
-                doc.text("DATOS GENERALES DE LA EVALUACIÓN", 14, 42);
-                doc.setFont("helvetica", "normal");
                 doc.setFontSize(9);
-                doc.text(`Estación de Servicio: ${estacion}`, 14, 49);
-                doc.text(`Coach / Evaluador: ${evaluador}`, 14, 55);
-                doc.text(`Supervisor / Encargado: ${supervisor}`, 14, 61);
-                doc.text(`Fecha de Evaluación: ${fecha}`, 14, 67);
-
-                // BANNER DINÁMICO DE RESULTADO GLOBAL (Cinta según calificación)
                 doc.setFont("helvetica", "bold");
-                doc.setFontSize(10);
-                doc.text("RESULTADO GLOBAL DE LA ESTACIÓN", 14, 77);
+                doc.text("DATOS GENERALES DE LA EVALUACIÓN", 14, 41);
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(8.5);
+                doc.text(`Estación de Servicio: ${estacion}`, 14, 47);
+                doc.text(`Coach / Evaluador: ${evaluador}`, 14, 52);
+                doc.text(`Supervisor / Encargado: ${supervisor}`, 14, 57);
+                doc.text(`Fecha de Evaluación: ${fecha}`, 14, 62);
+
+                // BANNER DINÁMICO DE RESULTADO GLOBAL
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(9.5);
+                doc.text("RESULTADO GLOBAL DE LA ESTACIÓN Y TIENDA", 14, 71);
 
                 const bgRGB = globalRatingConfig.pdfBgRGB;
                 const textRGB = globalRatingConfig.pdfTextRGB;
 
                 doc.setFillColor(bgRGB[0], bgRGB[1], bgRGB[2]);
-                doc.roundedRect(14, 81, 182, 28, 3, 3, 'F');
+                doc.roundedRect(14, 75, 182, 26, 3, 3, 'F');
                 
-                // Texto de Nivel
                 doc.setTextColor(textRGB[0], textRGB[1], textRGB[2]);
-                doc.setFontSize(11);
+                doc.setFontSize(10);
                 doc.setFont("helvetica", "bold");
-                doc.text(`NIVEL GLOBAL: ${globalRatingConfig.label.toUpperCase()}`, 20, 91);
+                doc.text(`NIVEL GLOBAL: ${globalRatingConfig.label.toUpperCase()}`, 20, 84);
 
-                // PORCENTAJE ENORME
-                doc.setFontSize(22);
+                // PORCENTAJE DESTACADO
+                doc.setFontSize(20);
                 doc.setFont("helvetica", "bold");
-                doc.text(`${globalPercentage}%`, 20, 102);
+                doc.text(`${globalPercentage}%`, 20, 95);
 
-                // Detalle de puntos al lado del porcentaje
-                doc.setFontSize(9);
+                doc.setFontSize(8.5);
                 doc.setFont("helvetica", "normal");
-                doc.text(`(${totalObtainedGlobal} de ${totalMaxGlobal} pts posibles - ${evaluatedPisterosCount} pisteros evaluados)`, 75, 101);
+                doc.text(`(${totalObtainedGlobal} de ${totalMaxGlobal} pts posibles - ${evaluatedStaffCount} colaborador(es) evaluado(s))`, 72, 94);
 
-                // Resumen de Pisteros
+                // Resumen de Personal Evaluado
                 doc.setTextColor(30, 30, 30);
                 doc.setFont("helvetica", "bold");
-                doc.setFontSize(10);
-                doc.text("RESUMEN DE PISTEROS", 14, 118);
+                doc.setFontSize(9.5);
+                doc.text("RESUMEN DE PERSONAL EVALUADO (PISTEROS Y TENDEROS)", 14, 109);
 
-                let startY = 123;
+                let startY = 113;
                 doc.setFillColor(240, 240, 240);
-                doc.rect(14, startY, 182, 8, 'F');
+                doc.rect(14, startY, 182, 7, 'F');
                 doc.setFont("helvetica", "bold");
-                doc.setFontSize(8);
-                doc.text("#", 18, startY + 5);
-                doc.text("Pistero", 30, startY + 5);
-                doc.text("Puntaje Obt.", 110, startY + 5);
-                doc.text("% Ajustado", 140, startY + 5);
-                doc.text("Nivel", 170, startY + 5);
+                doc.setFontSize(7.5);
+                doc.text("#", 17, startY + 4.5);
+                doc.text("Rol", 25, startY + 4.5);
+                doc.text("Nombre Colaborador", 55, startY + 4.5);
+                doc.text("Puntaje Obt.", 120, startY + 4.5);
+                doc.text("% Ajustado", 150, startY + 4.5);
+                doc.text("Nivel", 175, startY + 4.5);
 
-                startY += 8;
+                startY += 7;
                 doc.setFont("helvetica", "normal");
-                pisteros.forEach((p, idx) => {
-                    let stats = calculatePisteroStats(p.scores);
-                    let pRatingConfig = getRatingLevelConfig(stats.percentage);
-                    let nomP = p.name.trim() || `Pistero ${idx + 1}`;
+                staffList.forEach((s, idx) => {
+                    let stats = calculateStaffStats(s);
+                    let rating = getRatingLevelConfig(stats.percentage);
+                    let nom = s.name.trim() || `${s.role} ${idx + 1}`;
 
-                    doc.text(`${idx + 1}`, 18, startY + 5);
-                    doc.text(nomP, 30, startY + 5);
-                    doc.text(`${stats.obtainedSum} / ${stats.maxPossible}`, 110, startY + 5);
-                    doc.text(`${stats.percentage}%`, 140, startY + 5);
-                    doc.text(pRatingConfig.label, 170, startY + 5);
-                    startY += 8;
-                });
-
-                startY += 6;
-                doc.setFont("helvetica", "bold");
-                doc.setFontSize(10);
-                doc.text("DETALLE DE RÚBRICA POR CRITERIO", 14, startY);
-                startY += 6;
-
-                doc.setFillColor(240, 240, 240);
-                doc.rect(14, startY, 182, 8, 'F');
-                doc.setFontSize(8);
-                doc.text("Criterio", 18, startY + 5);
-                pisteros.forEach((p, idx) => {
-                    doc.text(`P${idx + 1}`, 150 + (idx * 12), startY + 5);
-                });
-
-                startY += 8;
-                doc.setFont("helvetica", "normal");
-                RUBRIC_CRITERIA.forEach(c => {
-                    doc.text(`${c.id}. ${c.title.substring(2).trim().substring(0, 42)}`, 18, startY + 5);
-                    pisteros.forEach((p, idx) => {
-                        let val = p.scores[c.id];
-                        let displayVal = val === 'NA' ? 'N/A' : (val || '0');
-                        doc.text(`${displayVal}`, 152 + (idx * 12), startY + 5);
-                    });
+                    doc.text(`${idx + 1}`, 17, startY + 4.5);
+                    doc.setFont("helvetica", "bold");
+                    doc.text(s.role, 25, startY + 4.5);
+                    doc.setFont("helvetica", "normal");
+                    doc.text(nom, 55, startY + 4.5);
+                    doc.text(`${stats.obtainedSum} / ${stats.maxPossible}`, 120, startY + 4.5);
+                    doc.text(`${stats.percentage}%`, 150, startY + 4.5);
+                    doc.text(rating.label, 175, startY + 4.5);
                     startY += 7;
+                });
+
+                startY += 5;
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(9.5);
+                doc.text("DETALLE DE CALIFICACIONES DE RÚBRICA", 14, startY);
+                startY += 5;
+
+                // Tabla de rubricas
+                staffList.forEach((s, idx) => {
+                    let nom = s.name.trim() || `${s.role} ${idx + 1}`;
+                    let criteriaList = s.role === 'TENDERO' ? TENDERO_CRITERIA : PISTERO_CRITERIA;
+
+                    doc.setFillColor(245, 247, 250);
+                    doc.rect(14, startY, 182, 6, 'F');
+                    doc.setFont("helvetica", "bold");
+                    doc.setFontSize(8);
+                    doc.text(`Colaborador #${idx + 1}: ${nom} (${s.role})`, 18, startY + 4.2);
+
+                    startY += 6;
+                    doc.setFont("helvetica", "normal");
+                    doc.setFontSize(7.5);
+
+                    criteriaList.forEach(c => {
+                        let val = s.scores[c.id];
+                        let displayVal = val === 'NA' ? 'N/A' : (val || '0');
+                        doc.text(`• ${c.title.substring(2).trim()}`, 18, startY + 4, { maxWidth: 160 });
+                        doc.setFont("helvetica", "bold");
+                        doc.text(`${displayVal}`, 185, startY + 4, { align: "right" });
+                        doc.setFont("helvetica", "normal");
+                        startY += 5.5;
+                    });
+                    startY += 3;
+
+                    if (startY > 260) {
+                        doc.addPage();
+                        startY = 20;
+                    }
                 });
 
                 doc.setFontSize(7);
                 doc.setTextColor(120, 120, 120);
-                doc.text("Escala: 1 = Necesita Mejora | 2 = En desarrollo | 3 = Competente | 4 = Excelente | N/A = No Aplica (no resta al total)", 14, startY + 6);
-                doc.text("Mentoría Puma · Puma Energy", 14, 285);
-                doc.text("Página 1 de 2", 185, 285, { align: "right" });
+                doc.text("Escala: 1 = Necesita Mejora | 2 = En desarrollo | 3 = Competente | 4 = Excelente | N/A = No Aplica (no resta al total)", 14, 285);
+                doc.text("Mentoría Puma · Puma Energy & Super 7", 14, 289);
+                doc.text("Página 1 de 2", 185, 289, { align: "right" });
 
                 // --- PÁGINA 2 ---
                 doc.addPage();
@@ -384,51 +449,53 @@
                 doc.setTextColor(255, 255, 255);
                 doc.setFont("helvetica", "bold");
                 doc.setFontSize(10);
-                doc.text("PUMA ENERGY", 14, 14);
+                doc.text("PUMA ENERGY  |  SUPER 7", 14, 14);
 
                 doc.setTextColor(30, 30, 30);
-                doc.setFontSize(12);
-                doc.text("OBSERVACIONES Y COMPROMISOS DEL COACH", 14, 32);
+                doc.setFontSize(11);
+                doc.text("OBSERVACIONES, COMPROMISOS Y HALLAZGOS", 14, 32);
 
                 startY = 38;
                 doc.setFillColor(240, 240, 240);
-                doc.rect(14, startY, 182, 8, 'F');
+                doc.rect(14, startY, 182, 7, 'F');
                 doc.setFontSize(8);
-                doc.text("Pistero", 18, startY + 5);
-                doc.text("Observaciones / Compromisos", 60, startY + 5);
+                doc.text("Colaborador", 18, startY + 4.5);
+                doc.text("Observaciones y Compromisos del Coach", 65, startY + 4.5);
 
-                startY += 8;
+                startY += 7;
                 doc.setFont("helvetica", "normal");
-                pisteros.forEach((p, idx) => {
-                    let nomP = p.name.trim() || `Pistero ${idx + 1}`;
-                    let obsP = p.coachNotes.trim() || "Sin observaciones registradas.";
-                    doc.text(nomP, 18, startY + 5);
-                    doc.text(obsP, 60, startY + 5, { maxWidth: 130 });
-                    startY += 12;
+                staffList.forEach((s, idx) => {
+                    let nom = s.name.trim() || `${s.role} ${idx + 1}`;
+                    let obsP = s.coachNotes.trim() || "Sin observaciones registradas.";
+                    doc.setFont("helvetica", "bold");
+                    doc.text(`${nom} (${s.role})`, 18, startY + 4);
+                    doc.setFont("helvetica", "normal");
+                    doc.text(obsP, 65, startY + 4, { maxWidth: 125 });
+                    startY += 10;
                 });
 
                 startY += 6;
                 doc.setFont("helvetica", "bold");
-                doc.setFontSize(12);
-                doc.text("OBSERVACIONES FINALES DE LA ESTACIÓN", 14, startY);
+                doc.setFontSize(11);
+                doc.text("OBSERVACIONES GENERALES DE LA ESTACIÓN Y SUPER 7", 14, startY);
                 
                 startY += 6;
-                doc.setFontSize(9);
-                doc.text("Observaciones Generales de la Estación:", 14, startY);
+                doc.setFontSize(8.5);
+                doc.text("Observaciones Generales:", 14, startY);
                 doc.setFont("helvetica", "normal");
-                doc.text(obsGral, 14, startY + 5, { maxWidth: 182 });
+                doc.text(obsGral, 14, startY + 4.5, { maxWidth: 182 });
 
-                startY += 16;
+                startY += 15;
                 doc.setFont("helvetica", "bold");
-                doc.text("Mantenimiento:", 14, startY);
+                doc.text("Mantenimiento y Estructura:", 14, startY);
                 doc.setFont("helvetica", "normal");
-                doc.text(obsMant, 14, startY + 5, { maxWidth: 182 });
+                doc.text(obsMant, 14, startY + 4.5, { maxWidth: 182 });
 
-                startY += 16;
+                startY += 15;
                 doc.setFont("helvetica", "bold");
-                doc.text("Seguridad:", 14, startY);
+                doc.text("Seguridad e Higiene:", 14, startY);
                 doc.setFont("helvetica", "normal");
-                doc.text(obsSeg, 14, startY + 5, { maxWidth: 182 });
+                doc.text(obsSeg, 14, startY + 4.5, { maxWidth: 182 });
 
                 startY += 25;
                 doc.setFont("helvetica", "bold");
@@ -446,7 +513,7 @@
                 doc.text(`Encargado / Receptor: ${managerSigner}`, 120, startY + 5);
                 doc.text("Firma digital / Conformidad", 120, startY + 9);
 
-                doc.text("Mentoría Puma · Puma Energy", 14, 285);
+                doc.text("Mentoría Puma · Puma Energy & Super 7", 14, 285);
                 doc.text("Página 2 de 2", 185, 285, { align: "right" });
 
                 doc.save(`Reporte_Evaluacion_${estacion.replace(/\s+/g, '_')}.pdf`);
@@ -454,22 +521,25 @@
 
             return (
                 <div className="min-h-screen pb-12">
-                    {/* TOP HEADER */}
+                    {/* HEADER TOP */}
                     <div className="bg-pumaRed text-white relative overflow-hidden pb-8 pt-6 px-4 shadow-md">
-                        <div className="absolute top-[-20px] right-[-30px] w-48 h-48 rounded-full border-[18px] border-amber-900/20 pointer-events-none"></div>
-                        <div className="absolute bottom-[-50px] right-[20px] w-64 h-64 rounded-full border-[24px] border-amber-900/10 pointer-events-none"></div>
-                        
                         <div className="max-w-xl mx-auto">
-                            <div className="inline-flex items-center gap-2 bg-white text-pumaGreen font-bold px-3 py-1 rounded-full text-xs uppercase tracking-wider mb-3 shadow-sm">
-                                <span className="w-2 h-2 rounded-full bg-pumaGreen"></span>
-                                Puma Energy
+                            <div className="flex items-center gap-2 mb-3">
+                                <span className="inline-flex items-center gap-1.5 bg-white text-pumaGreen font-bold px-3 py-1 rounded-full text-xs uppercase tracking-wider shadow-sm">
+                                    <span className="w-2 h-2 rounded-full bg-pumaGreen"></span>
+                                    Puma Energy
+                                </span>
+                                <span className="inline-flex items-center gap-1.5 bg-amber-900 text-white font-black px-3 py-1 rounded-full text-xs uppercase tracking-wider shadow-sm">
+                                    <i className="fa-solid fa-store text-amber-300"></i>
+                                    Super 7
+                                </span>
                             </div>
-                            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-2">
+                            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-1">
                                 Mentoría Puma
                             </h1>
-                            <p className="text-white/90 text-sm md:text-base font-medium flex items-center gap-2">
+                            <p className="text-white/90 text-sm font-medium flex items-center gap-2">
                                 <i className="fa-regular fa-clipboard-check text-lg"></i>
-                                Evaluación y auditoría de estaciones de servicio
+                                Evaluación y auditoría de Estaciones de Servicio y Tiendas Super 7
                             </p>
                         </div>
                     </div>
@@ -481,16 +551,16 @@
                             <div className="p-5 border-b border-slate-100 flex items-start gap-3">
                                 <span className="w-7 h-7 rounded-lg bg-pumaGreen text-white font-bold flex items-center justify-center text-sm shrink-0">1</span>
                                 <div>
-                                    <h2 className="text-lg font-bold text-slate-800 leading-tight">Datos de la Estación</h2>
-                                    <p className="text-xs text-slate-500 mt-0.5">Información general de la auditoría.</p>
+                                    <h2 className="text-lg font-bold text-slate-800 leading-tight">Datos de la Estación y Tienda</h2>
+                                    <p className="text-xs text-slate-500 mt-0.5">Información general para la auditoría.</p>
                                 </div>
                             </div>
                             <div className="p-5 space-y-4">
                                 <div>
-                                    <label className="block text-xs font-semibold text-slate-700 mb-1">Nombre de la Estación de Servicio</label>
+                                    <label className="block text-xs font-semibold text-slate-700 mb-1">Nombre de la Estación / Tienda Super 7</label>
                                     <input 
                                         type="text"
-                                        placeholder="Ej. Puma Las Américas"
+                                        placeholder="Ej. Puma y Super 7 Las Américas"
                                         value={stationData.stationName}
                                         onChange={(e) => setStationData({...stationData, stationName: e.target.value})}
                                         className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pumaGreen transition"
@@ -507,10 +577,10 @@
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-semibold text-slate-700 mb-1">Nombre del Supervisor o Encargado</label>
+                                    <label className="block text-xs font-semibold text-slate-700 mb-1">Nombre del Supervisor / Gerente de Tienda</label>
                                     <input 
                                         type="text"
-                                        placeholder="Nombre del supervisor / encargado de turno"
+                                        placeholder="Nombre del encargado de la estación/tienda"
                                         value={stationData.supervisorName}
                                         onChange={(e) => setStationData({...stationData, supervisorName: e.target.value})}
                                         className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pumaGreen transition"
@@ -528,40 +598,60 @@
                             </div>
                         </div>
 
-                        {/* SECTION 2: EVALUACIÓN DE PISTEROS */}
+                        {/* SECTION 2: EVALUACIÓN DE PERSONAL (PISTEROS Y TENDEROS) */}
                         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden print-card">
                             <div className="p-5 border-b border-slate-100 flex items-start justify-between">
                                 <div className="flex items-start gap-3">
                                     <span className="w-7 h-7 rounded-lg bg-pumaGreen text-white font-bold flex items-center justify-center text-sm shrink-0">2</span>
                                     <div>
-                                        <h2 className="text-lg font-bold text-slate-800 leading-tight">Evaluación de Pisteros</h2>
-                                        <p className="text-xs text-slate-500 mt-0.5">Califica de 1 a 4 o marca N/A (No Aplica).</p>
+                                        <h2 className="text-lg font-bold text-slate-800 leading-tight">Evaluación de Personal</h2>
+                                        <p className="text-xs text-slate-500 mt-0.5">Evalúa Pisteros de Pista y Tenderos de Super 7.</p>
                                     </div>
                                 </div>
                             </div>
 
                             <div className="p-5 space-y-6">
-                                <button
-                                    onClick={handleAddPistero}
-                                    type="button"
-                                    className="w-full py-3 bg-pumaGreen hover:bg-pumaDarkGreen text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2 transition shadow-sm active:scale-[0.99] no-print"
-                                >
-                                    <i className="fa-solid fa-user-plus text-base"></i>
-                                    Agregar pistero
-                                </button>
+                                {/* BOTONES AGREGAR PISTERO / TENDERO */}
+                                <div className="grid grid-cols-2 gap-3 no-print">
+                                    <button
+                                        onClick={() => handleAddStaff('PISTERO')}
+                                        type="button"
+                                        className="py-3 px-2 bg-pumaGreen hover:bg-pumaDarkGreen text-white font-bold text-xs md:text-sm rounded-xl flex items-center justify-center gap-2 transition shadow-sm active:scale-[0.99]"
+                                    >
+                                        <i className="fa-solid fa-gas-pump"></i>
+                                        + Agregar Pistero
+                                    </button>
+                                    <button
+                                        onClick={() => handleAddStaff('TENDERO')}
+                                        type="button"
+                                        className="py-3 px-2 bg-amber-900 hover:bg-amber-800 text-white font-bold text-xs md:text-sm rounded-xl flex items-center justify-center gap-2 transition shadow-sm active:scale-[0.99]"
+                                    >
+                                        <i className="fa-solid fa-store"></i>
+                                        + Agregar Tendero
+                                    </button>
+                                </div>
 
-                                {pisteros.map((pistero, index) => {
-                                    const stats = calculatePisteroStats(pistero.scores);
-                                    const pisteroRatingConfig = getRatingLevelConfig(stats.percentage);
+                                {staffList.map((staff, index) => {
+                                    const stats = calculateStaffStats(staff);
+                                    const ratingConfig = getRatingLevelConfig(stats.percentage);
+                                    const isTendero = staff.role === 'TENDERO';
+                                    const currentCriteria = isTendero ? TENDERO_CRITERIA : PISTERO_CRITERIA;
 
                                     return (
-                                        <div key={pistero.id} className="bg-slate-50/70 border border-slate-200 rounded-2xl overflow-hidden print-card">
+                                        <div key={staff.id} className="bg-slate-50/70 border border-slate-200 rounded-2xl overflow-hidden print-card">
+                                            {/* HEADER INDIVIDUAL */}
                                             <div className="p-4 bg-white border-b border-slate-100">
-                                                <div className="flex items-center justify-between gap-2 mb-3">
-                                                    <span className="text-xs font-bold text-slate-700">Nombre del Pistero</span>
-                                                    {pisteros.length > 1 && (
+                                                <div className="flex items-center justify-between gap-2 mb-2">
+                                                    <span className={`px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${
+                                                        isTendero ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                                    }`}>
+                                                        <i className={`fa-solid ${isTendero ? 'fa-store' : 'fa-gas-pump'} mr-1`}></i>
+                                                        {staff.role}
+                                                    </span>
+
+                                                    {staffList.length > 1 && (
                                                         <button 
-                                                            onClick={() => handleRemovePistero(pistero.id)}
+                                                            onClick={() => handleRemoveStaff(staff.id)}
                                                             className="text-xs text-rose-600 hover:text-rose-800 font-semibold no-print"
                                                         >
                                                             <i className="fa-solid fa-trash-can mr-1"></i> Eliminar
@@ -570,40 +660,45 @@
                                                 </div>
 
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-xl bg-pumaRed text-white font-black text-lg flex items-center justify-center shrink-0">
+                                                    <div className={`w-10 h-10 rounded-xl text-white font-black text-lg flex items-center justify-center shrink-0 ${
+                                                        isTendero ? 'bg-amber-900' : 'bg-pumaRed'
+                                                    }`}>
                                                         {index + 1}
                                                     </div>
                                                     <input
                                                         type="text"
-                                                        placeholder="Nombre completo"
-                                                        value={pistero.name}
-                                                        onChange={(e) => handlePisteroNameChange(pistero.id, e.target.value)}
+                                                        placeholder={isTendero ? "Nombre del tendero (Super 7)" : "Nombre del pistero"}
+                                                        value={staff.name}
+                                                        onChange={(e) => handleNameChange(staff.id, e.target.value)}
                                                         className="w-full px-3.5 py-2 text-sm font-medium rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-pumaGreen transition"
                                                     />
                                                 </div>
 
                                                 <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
                                                     <div>
-                                                        <p className="text-[10px] font-bold tracking-wider text-slate-400 uppercase">Resultado Individual</p>
+                                                        <p className="text-[10px] font-bold tracking-wider text-slate-400 uppercase">Puntuación Individual</p>
                                                         <p className="text-xl font-black text-slate-800">
                                                             <span className="text-pumaRed">{stats.percentage}%</span>
                                                             <span className="text-xs font-normal text-slate-500 ml-1.5">({stats.obtainedSum}/{stats.maxPossible} pts)</span>
                                                         </p>
                                                     </div>
-                                                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${pisteroRatingConfig.badgeClass}`}>
-                                                        {pisteroRatingConfig.label}
+                                                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${ratingConfig.badgeClass}`}>
+                                                        {ratingConfig.label}
                                                     </span>
                                                 </div>
                                             </div>
 
-                                            <div className="p-4 border-b border-slate-200/60 bg-slate-100/50 flex items-center justify-between">
-                                                <span className="text-[11px] font-extrabold tracking-wider text-slate-500 uppercase">RÚBRICA DE EVALUACIÓN</span>
-                                                <span className="text-xs font-semibold text-slate-500">{stats.applicableCount} preguntas aplicables</span>
+                                            <div className="p-3 border-b border-slate-200/60 bg-slate-100/50 flex items-center justify-between">
+                                                <span className="text-[10px] font-extrabold tracking-wider text-slate-500 uppercase">
+                                                    RÚBRICA {staff.role} ({currentCriteria.length} PREGUNTAS)
+                                                </span>
+                                                <span className="text-xs font-semibold text-slate-500">{stats.applicableCount} aplicables</span>
                                             </div>
 
+                                            {/* LISTA DE PREGUNTAS / CRITERIOS */}
                                             <div className="p-4 space-y-6 bg-white">
-                                                {RUBRIC_CRITERIA.map((criterion) => {
-                                                    const selectedValue = pistero.scores[criterion.id];
+                                                {currentCriteria.map((criterion) => {
+                                                    const selectedValue = staff.scores[criterion.id];
 
                                                     return (
                                                         <div key={criterion.id} className="space-y-2 border-b border-slate-100 pb-5 last:border-0 last:pb-0">
@@ -630,7 +725,7 @@
                                                                         <button
                                                                             key={String(btn.val)}
                                                                             type="button"
-                                                                            onClick={() => handleScoreChange(pistero.id, criterion.id, btn.val)}
+                                                                            onClick={() => handleScoreChange(staff.id, criterion.id, btn.val)}
                                                                             className={`py-2 px-0.5 rounded-xl border text-center transition-all ${
                                                                                 isSelected
                                                                                     ? `${btn.color} font-bold shadow-sm`
@@ -652,8 +747,8 @@
                                                     <textarea
                                                         rows="3"
                                                         placeholder="Fortalezas observadas, áreas de mejora y compromisos..."
-                                                        value={pistero.coachNotes}
-                                                        onChange={(e) => handleNotesChange(pistero.id, e.target.value)}
+                                                        value={staff.coachNotes}
+                                                        onChange={(e) => handleNotesChange(staff.id, e.target.value)}
                                                         className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pumaGreen transition"
                                                     ></textarea>
                                                 </div>
@@ -662,62 +757,72 @@
                                     );
                                 })}
 
-                                <button
-                                    onClick={handleAddPistero}
-                                    type="button"
-                                    className="w-full py-3.5 border-2 border-dashed border-pumaGreen/60 hover:border-pumaGreen text-pumaGreen font-bold text-sm rounded-xl flex items-center justify-center gap-2 transition hover:bg-pumaGreen/5 active:scale-[0.99] no-print"
-                                >
-                                    <i className="fa-solid fa-user-plus text-base"></i>
-                                    Agregar otro pistero
-                                </button>
+                                <div className="grid grid-cols-2 gap-3 pt-2 no-print">
+                                    <button
+                                        onClick={() => handleAddStaff('PISTERO')}
+                                        type="button"
+                                        className="py-3 border-2 border-dashed border-pumaGreen/60 hover:border-pumaGreen text-pumaGreen font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition hover:bg-pumaGreen/5 active:scale-[0.99]"
+                                    >
+                                        <i className="fa-solid fa-plus text-xs"></i>
+                                        Pistero
+                                    </button>
+                                    <button
+                                        onClick={() => handleAddStaff('TENDERO')}
+                                        type="button"
+                                        className="py-3 border-2 border-dashed border-amber-700/60 hover:border-amber-700 text-amber-800 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition hover:bg-amber-50 active:scale-[0.99]"
+                                    >
+                                        <i className="fa-solid fa-plus text-xs"></i>
+                                        Tendero (Super 7)
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
-                        {/* SECTION 3: OBSERVACIONES DE LA ESTACIÓN Y FIRMAS */}
+                        {/* SECTION 3: OBSERVACIONES DE LA ESTACIÓN / TIENDA Y FIRMAS */}
                         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden print-card">
                             <div className="p-5 border-b border-slate-100 flex items-start gap-3">
                                 <span className="w-7 h-7 rounded-lg bg-pumaGreen text-white font-bold flex items-center justify-center text-sm shrink-0">3</span>
                                 <div>
-                                    <h2 className="text-lg font-bold text-slate-800 leading-tight">Observaciones de la Estación y Firmas</h2>
-                                    <p className="text-xs text-slate-500 mt-0.5">Hallazgos y datos para firma de conformidad.</p>
+                                    <h2 className="text-lg font-bold text-slate-800 leading-tight">Observaciones de Estación / Tienda y Firmas</h2>
+                                    <p className="text-xs text-slate-500 mt-0.5">Hallazgos generales y validación.</p>
                                 </div>
                             </div>
                             <div className="p-5 space-y-4">
                                 <div>
-                                    <label className="block text-xs font-semibold text-slate-700 mb-1">Observaciones Generales de la Estación</label>
+                                    <label className="block text-xs font-semibold text-slate-700 mb-1">Observaciones Generales (Pista y Super 7)</label>
                                     <textarea
                                         rows="3"
-                                        placeholder="Imagen de la estación, flujo de clientes, clima laboral..."
+                                        placeholder="Imagen de la estación, flujo de clientes en tienda, clima laboral..."
                                         value={stationObs.general}
                                         onChange={(e) => setStationObs({...stationObs, general: e.target.value})}
                                         className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pumaGreen transition"
                                     ></textarea>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-semibold text-slate-700 mb-1">Mantenimiento</label>
+                                    <label className="block text-xs font-semibold text-slate-700 mb-1">Mantenimiento y Estructura</label>
                                     <textarea
                                         rows="3"
-                                        placeholder="Estado de dispensadores, iluminación, baños, señalización..."
+                                        placeholder="Estado de dispensadores, iluminación, vitrinas, baños..."
                                         value={stationObs.maintenance}
                                         onChange={(e) => setStationObs({...stationObs, maintenance: e.target.value})}
                                         className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pumaGreen transition"
                                     ></textarea>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-semibold text-slate-700 mb-1">Seguridad</label>
+                                    <label className="block text-xs font-semibold text-slate-700 mb-1">Seguridad e Higiene</label>
                                     <textarea
                                         rows="3"
-                                        placeholder="Extintores, rutas de evacuación, EPP, descarga de cisternas..."
+                                        placeholder="Extintores, EPP, manipulación de alimentos, limpieza general..."
                                         value={stationObs.security}
                                         onChange={(e) => setStationObs({...stationObs, security: e.target.value})}
                                         className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pumaGreen transition"
                                     ></textarea>
                                 </div>
                                 <div className="pt-2 border-t border-slate-100">
-                                    <label className="block text-xs font-semibold text-slate-700 mb-1">Nombre del Encargado Receptor (Firma Digital / Validación)</label>
+                                    <label className="block text-xs font-semibold text-slate-700 mb-1">Nombre del Encargado / Gerente Receptor (Firma Digital / Validación)</label>
                                     <input 
                                         type="text"
-                                        placeholder="Nombre de quien recibe/valida en estación"
+                                        placeholder="Nombre de quien recibe/valida en la estación o tienda"
                                         value={stationObs.managerSignerName}
                                         onChange={(e) => setStationObs({...stationObs, managerSignerName: e.target.value})}
                                         className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pumaGreen transition"
@@ -730,45 +835,53 @@
                         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden print-card">
                             <div className="bg-pumaGreen text-white p-4">
                                 <span className="text-[10px] font-bold tracking-widest opacity-80 uppercase block">INFORME FINAL DE AUDITORÍA</span>
-                                <h3 className="text-xl font-extrabold leading-tight">Resultado Global</h3>
+                                <h3 className="text-xl font-extrabold leading-tight">Resultado Global Estación + Super 7</h3>
                             </div>
 
                             <div className="p-5 space-y-5">
-                                {/* BANNER DE RESULTADO CON COLOR Y TAMAÑO DINÁMICO */}
+                                {/* BANNER DE RESULTADO GLOBAL CON COLOR Y PORCENTAJE GRANDE */}
                                 <div className={`rounded-2xl p-6 text-center shadow-sm transition-all ${globalRatingConfig.containerClass}`}>
                                     <p className="text-[10px] font-bold tracking-widest uppercase mb-1 opacity-90">
-                                        PUNTUACIÓN GLOBAL DE LA ESTACIÓN
+                                        PUNTUACIÓN GLOBAL COMBINADA
                                     </p>
                                     
-                                    {/* PORCENTAJE DESTACADO EN GRANDE */}
+                                    {/* PORCENTAJE DESTACADO */}
                                     <div className="text-5xl md:text-6xl font-black my-2 tracking-tight">
                                         {globalPercentage}%
                                     </div>
 
                                     <p className="text-xs font-semibold mb-4 opacity-90">
-                                        Puntaje: {totalObtainedGlobal} / {totalMaxGlobal} pts | {evaluatedPisterosCount} pistero(s) evaluado(s)
+                                        Puntaje: {totalObtainedGlobal} / {totalMaxGlobal} pts | {evaluatedStaffCount} colaborador(es) evaluado(s)
                                     </p>
 
                                     <div className="inline-block">
                                         <span className={`px-5 py-2 rounded-full text-xs font-black uppercase tracking-wider shadow-sm ${globalRatingConfig.badgeClass}`}>
-                                            NIVEL: {globalRatingConfig.label}
+                                            NIVEL GLOBAL: {globalRatingConfig.label}
                                         </span>
                                     </div>
                                 </div>
 
+                                {/* RESUMEN POR COLABORADOR */}
                                 <div>
-                                    <h4 className="text-xs font-bold tracking-wider text-slate-400 uppercase mb-2">RESUMEN POR PISTERO</h4>
+                                    <h4 className="text-xs font-bold tracking-wider text-slate-400 uppercase mb-2">RESUMEN POR COLABORADOR</h4>
                                     <div className="divide-y divide-slate-100 border-t border-b border-slate-100">
-                                        {pisteros.map((p, idx) => {
-                                            const stats = calculatePisteroStats(p.scores);
-                                            const pRating = getRatingLevelConfig(stats.percentage);
+                                        {staffList.map((s, idx) => {
+                                            const stats = calculateStaffStats(s);
+                                            const rating = getRatingLevelConfig(stats.percentage);
                                             return (
-                                                <div key={p.id} className="py-2.5 flex items-center justify-between text-sm">
-                                                    <span className="font-semibold text-slate-700">{p.name.trim() || `Pistero ${idx + 1}`}</span>
+                                                <div key={s.id} className="py-2.5 flex items-center justify-between text-sm">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${
+                                                            s.role === 'TENDERO' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
+                                                        }`}>
+                                                            {s.role}
+                                                        </span>
+                                                        <span className="font-semibold text-slate-700">{s.name.trim() || `${s.role} ${idx + 1}`}</span>
+                                                    </div>
                                                     <div className="flex items-center gap-2">
                                                         <span className="font-extrabold text-slate-800">{stats.percentage}%</span>
-                                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${pRating.badgeClass}`}>
-                                                            {pRating.label}
+                                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${rating.badgeClass}`}>
+                                                            {rating.label}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -777,8 +890,9 @@
                                     </div>
                                 </div>
 
+                                {/* CRITERIOS DE RANGO Y COLOR */}
                                 <div className="pt-2">
-                                    <h4 className="text-[10px] font-bold tracking-wider text-slate-400 uppercase mb-2">CRITERIOS DE CALIFICACIÓN</h4>
+                                    <h4 className="text-[10px] font-bold tracking-wider text-slate-400 uppercase mb-2">ESCALA Y COLORES DE CALIFICACIÓN</h4>
                                     <div className="grid grid-cols-2 gap-2 text-xs font-medium text-slate-600">
                                         <div className="flex items-center gap-2">
                                             <span className="w-3 h-3 rounded-full bg-[#005e2f] shrink-0"></span>
@@ -811,7 +925,7 @@
                         </div>
 
                         <div className="text-center pt-4 pb-2">
-                            <p className="text-xs text-slate-400 font-medium">Mentoría Puma · Puma Energy</p>
+                            <p className="text-xs text-slate-400 font-medium">Mentoría Puma · Puma Energy & Super 7</p>
                         </div>
 
                     </div>
@@ -823,4 +937,3 @@
     </script>
 </body>
 </html>
-```
