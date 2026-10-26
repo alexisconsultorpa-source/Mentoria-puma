@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -69,7 +68,7 @@
     <script type="text/babel">
         const { useState } = React;
 
-        // Rúbrica para Pisteros (Pista)
+        // Rúbrica para Agentes de Pista (Pista)
         const PISTERO_CRITERIA = [
             {
                 id: 1,
@@ -113,7 +112,7 @@
             }
         ];
 
-        // Rúbrica para Tenderos (Super 7)
+        // Rúbrica para Agentes de Tienda (Super 7)
         const TENDERO_CRITERIA = [
             {
                 id: 1,
@@ -171,7 +170,7 @@
                     badgeClass: 'bg-white text-[#005e2f]',
                     textClass: 'text-white',
                     percentClass: 'text-amber-300 font-black',
-                    pdfBgRGB: [0, 94, 47], // Verde Oscuro
+                    pdfBgRGB: [0, 94, 47],
                     pdfTextRGB: [255, 255, 255]
                 };
             }
@@ -182,7 +181,7 @@
                     badgeClass: 'bg-[#007a3d] text-white',
                     textClass: 'text-[#005e2f]',
                     percentClass: 'text-[#007a3d] font-black',
-                    pdfBgRGB: [230, 244, 237], // Verde Claro
+                    pdfBgRGB: [230, 244, 237],
                     pdfTextRGB: [0, 94, 47]
                 };
             }
@@ -193,7 +192,7 @@
                     badgeClass: 'bg-amber-500 text-white',
                     textClass: 'text-amber-900',
                     percentClass: 'text-amber-700 font-black',
-                    pdfBgRGB: [254, 243, 199], // Amarillo Claro
+                    pdfBgRGB: [254, 243, 199],
                     pdfTextRGB: [120, 53, 15]
                 };
             }
@@ -203,7 +202,7 @@
                 badgeClass: 'bg-rose-600 text-white',
                 textClass: 'text-rose-900',
                 percentClass: 'text-rose-700 font-black',
-                pdfBgRGB: [254, 226, 226], // Rojo Claro
+                pdfBgRGB: [254, 226, 226],
                 pdfTextRGB: [136, 19, 55]
             };
         };
@@ -220,9 +219,9 @@
             const [staffList, setStaffList] = useState([
                 {
                     id: 1,
-                    role: 'PISTA', // 'PISTA' | 'TIENDA'
+                    role: 'AGENTE_PISTA', // 'AGENTE_PISTA' | 'AGENTE_TIENDA'
                     name: '',
-                    scores: {}, // guarda valores numéricos (1-4) o 'NA'
+                    scores: {},
                     coachNotes: ''
                 }
             ]);
@@ -263,9 +262,9 @@
                 setStaffList(staffList.map(s => s.id === staffId ? { ...s, coachNotes } : s));
             };
 
-            // Cálculo individual de colaborador (pista o tienda)
+            // Cálculo individual de colaborador
             const calculateStaffStats = (staff) => {
-                const criteriaList = staff.role === 'TENDERO' ? TENDERO_CRITERIA : PISTERO_CRITERIA;
+                const criteriaList = staff.role === 'AGENTE_TIENDA' ? TENDERO_CRITERIA : PISTERO_CRITERIA;
                 let applicableCount = 0;
                 let obtainedSum = 0;
 
@@ -282,7 +281,7 @@
                 return { obtainedSum, maxPossible, applicableCount, percentage };
             };
 
-            // Cálculo Global acumulado (Estación + Tienda Super 7)
+            // Cálculo Global acumulado
             let totalObtainedGlobal = 0;
             let totalMaxGlobal = 0;
             let evaluatedStaffCount = 0;
@@ -314,7 +313,6 @@
                 const managerSigner = stationObs.managerSignerName || supervisor || "Gerente / Encargado";
 
                 // --- PÁGINA 1 ---
-                // Header Puma & Super 7
                 doc.setFillColor(227, 24, 55);
                 doc.rect(0, 0, 210, 22, 'F');
                 doc.setTextColor(255, 255, 255);
@@ -326,7 +324,6 @@
                 doc.setFontSize(13);
                 doc.text("Mentoría Puma · Ficha de Evaluación Estación y Tienda Super 7", 14, 32);
 
-                // Datos generales
                 doc.setFontSize(9);
                 doc.setFont("helvetica", "bold");
                 doc.text("DATOS GENERALES DE LA EVALUACIÓN", 14, 41);
@@ -337,7 +334,6 @@
                 doc.text(`Supervisor / Encargado: ${supervisor}`, 14, 57);
                 doc.text(`Fecha de Evaluación: ${fecha}`, 14, 62);
 
-                // BANNER DINÁMICO DE RESULTADO GLOBAL
                 doc.setFont("helvetica", "bold");
                 doc.setFontSize(9.5);
                 doc.text("RESULTADO GLOBAL DE LA ESTACIÓN Y TIENDA", 14, 71);
@@ -353,7 +349,6 @@
                 doc.setFont("helvetica", "bold");
                 doc.text(`NIVEL GLOBAL: ${globalRatingConfig.label.toUpperCase()}`, 20, 84);
 
-                // PORCENTAJE DESTACADO
                 doc.setFontSize(20);
                 doc.setFont("helvetica", "bold");
                 doc.text(`${globalPercentage}%`, 20, 95);
@@ -362,11 +357,10 @@
                 doc.setFont("helvetica", "normal");
                 doc.text(`(${totalObtainedGlobal} de ${totalMaxGlobal} pts posibles - ${evaluatedStaffCount} colaborador(es) evaluado(s))`, 72, 94);
 
-                // Resumen de Personal Evaluado
                 doc.setTextColor(30, 30, 30);
                 doc.setFont("helvetica", "bold");
                 doc.setFontSize(9.5);
-                doc.text("RESUMEN DE PERSONAL EVALUADO (PISTEROS Y TENDEROS)", 14, 109);
+                doc.text("RESUMEN DE PERSONAL EVALUADO (AGENTES DE PISTA Y TIENDA)", 14, 109);
 
                 let startY = 113;
                 doc.setFillColor(240, 240, 240);
@@ -385,11 +379,12 @@
                 staffList.forEach((s, idx) => {
                     let stats = calculateStaffStats(s);
                     let rating = getRatingLevelConfig(stats.percentage);
-                    let nom = s.name.trim() || `${s.role} ${idx + 1}`;
+                    let roleDisplay = s.role === 'AGENTE_TIENDA' ? 'Agente Tienda' : 'Agente Pista';
+                    let nom = s.name.trim() || `${roleDisplay} ${idx + 1}`;
 
                     doc.text(`${idx + 1}`, 17, startY + 4.5);
                     doc.setFont("helvetica", "bold");
-                    doc.text(s.role, 25, startY + 4.5);
+                    doc.text(roleDisplay, 25, startY + 4.5);
                     doc.setFont("helvetica", "normal");
                     doc.text(nom, 55, startY + 4.5);
                     doc.text(`${stats.obtainedSum} / ${stats.maxPossible}`, 120, startY + 4.5);
@@ -404,16 +399,16 @@
                 doc.text("DETALLE DE CALIFICACIONES DE RÚBRICA", 14, startY);
                 startY += 5;
 
-                // Tabla de rubricas
                 staffList.forEach((s, idx) => {
-                    let nom = s.name.trim() || `${s.role} ${idx + 1}`;
-                    let criteriaList = s.role === 'TENDERO' ? TENDERO_CRITERIA : PISTERO_CRITERIA;
+                    let roleDisplay = s.role === 'AGENTE_TIENDA' ? 'Agente Tienda' : 'Agente Pista';
+                    let nom = s.name.trim() || `${roleDisplay} ${idx + 1}`;
+                    let criteriaList = s.role === 'AGENTE_TIENDA' ? TENDERO_CRITERIA : PISTERO_CRITERIA;
 
                     doc.setFillColor(245, 247, 250);
                     doc.rect(14, startY, 182, 6, 'F');
                     doc.setFont("helvetica", "bold");
                     doc.setFontSize(8);
-                    doc.text(`Colaborador #${idx + 1}: ${nom} (${s.role})`, 18, startY + 4.2);
+                    doc.text(`Colaborador #${idx + 1}: ${nom} (${roleDisplay})`, 18, startY + 4.2);
 
                     startY += 6;
                     doc.setFont("helvetica", "normal");
@@ -465,10 +460,11 @@
                 startY += 7;
                 doc.setFont("helvetica", "normal");
                 staffList.forEach((s, idx) => {
-                    let nom = s.name.trim() || `${s.role} ${idx + 1}`;
+                    let roleDisplay = s.role === 'AGENTE_TIENDA' ? 'Agente Tienda' : 'Agente Pista';
+                    let nom = s.name.trim() || `${roleDisplay} ${idx + 1}`;
                     let obsP = s.coachNotes.trim() || "Sin observaciones registradas.";
                     doc.setFont("helvetica", "bold");
-                    doc.text(`${nom} (${s.role})`, 18, startY + 4);
+                    doc.text(`${nom} (${roleDisplay})`, 18, startY + 4);
                     doc.setFont("helvetica", "normal");
                     doc.text(obsP, 65, startY + 4, { maxWidth: 125 });
                     startY += 10;
@@ -598,44 +594,45 @@
                             </div>
                         </div>
 
-                        {/* SECTION 2: EVALUACIÓN DE PERSONAL (PISTEROS Y TENDEROS) */}
+                        {/* SECTION 2: EVALUACIÓN DE PERSONAL */}
                         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden print-card">
                             <div className="p-5 border-b border-slate-100 flex items-start justify-between">
                                 <div className="flex items-start gap-3">
                                     <span className="w-7 h-7 rounded-lg bg-pumaGreen text-white font-bold flex items-center justify-center text-sm shrink-0">2</span>
                                     <div>
                                         <h2 className="text-lg font-bold text-slate-800 leading-tight">Evaluación de Personal</h2>
-                                        <p className="text-xs text-slate-500 mt-0.5">Evalúa Pisteros de Pista y Tenderos de Super 7.</p>
+                                        <p className="text-xs text-slate-500 mt-0.5">Evalúa Agentes de Pista y Agentes de Tienda (Super 7).</p>
                                     </div>
                                 </div>
                             </div>
 
                             <div className="p-5 space-y-6">
-                                {/* BOTONES AGREGAR PISTERO / TENDERO */}
+                                {/* BOTONES AGREGAR */}
                                 <div className="grid grid-cols-2 gap-3 no-print">
                                     <button
-                                        onClick={() => handleAddStaff('PISTERO')}
+                                        onClick={() => handleAddStaff('AGENTE_PISTA')}
                                         type="button"
                                         className="py-3 px-2 bg-pumaGreen hover:bg-pumaDarkGreen text-white font-bold text-xs md:text-sm rounded-xl flex items-center justify-center gap-2 transition shadow-sm active:scale-[0.99]"
                                     >
                                         <i className="fa-solid fa-gas-pump"></i>
-                                        + Agregar Pistero
+                                        + Agente de Pista
                                     </button>
                                     <button
-                                        onClick={() => handleAddStaff('TENDERO')}
+                                        onClick={() => handleAddStaff('AGENTE_TIENDA')}
                                         type="button"
                                         className="py-3 px-2 bg-amber-900 hover:bg-amber-800 text-white font-bold text-xs md:text-sm rounded-xl flex items-center justify-center gap-2 transition shadow-sm active:scale-[0.99]"
                                     >
                                         <i className="fa-solid fa-store"></i>
-                                        + Agregar Tendero
+                                        + Agente de Tienda
                                     </button>
                                 </div>
 
                                 {staffList.map((staff, index) => {
                                     const stats = calculateStaffStats(staff);
                                     const ratingConfig = getRatingLevelConfig(stats.percentage);
-                                    const isTendero = staff.role === 'TENDERO';
-                                    const currentCriteria = isTendero ? TENDERO_CRITERIA : PISTERO_CRITERIA;
+                                    const isAgenteTienda = staff.role === 'AGENTE_TIENDA';
+                                    const currentCriteria = isAgenteTienda ? TENDERO_CRITERIA : PISTERO_CRITERIA;
+                                    const roleBadgeText = isAgenteTienda ? 'Agente de Tienda' : 'Agente de Pista';
 
                                     return (
                                         <div key={staff.id} className="bg-slate-50/70 border border-slate-200 rounded-2xl overflow-hidden print-card">
@@ -643,10 +640,10 @@
                                             <div className="p-4 bg-white border-b border-slate-100">
                                                 <div className="flex items-center justify-between gap-2 mb-2">
                                                     <span className={`px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${
-                                                        isTendero ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                                        isAgenteTienda ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                                                     }`}>
-                                                        <i className={`fa-solid ${isTendero ? 'fa-store' : 'fa-gas-pump'} mr-1`}></i>
-                                                        {staff.role}
+                                                        <i className={`fa-solid ${isAgenteTienda ? 'fa-store' : 'fa-gas-pump'} mr-1`}></i>
+                                                        {roleBadgeText}
                                                     </span>
 
                                                     {staffList.length > 1 && (
@@ -661,13 +658,13 @@
 
                                                 <div className="flex items-center gap-3">
                                                     <div className={`w-10 h-10 rounded-xl text-white font-black text-lg flex items-center justify-center shrink-0 ${
-                                                        isTendero ? 'bg-amber-900' : 'bg-pumaRed'
+                                                        isAgenteTienda ? 'bg-amber-900' : 'bg-pumaRed'
                                                     }`}>
                                                         {index + 1}
                                                     </div>
                                                     <input
                                                         type="text"
-                                                        placeholder={isTendero ? "Nombre del tendero (Super 7)" : "Nombre del pistero"}
+                                                        placeholder={isAgenteTienda ? "Nombre del agente de tienda (Super 7)" : "Nombre del agente de pista"}
                                                         value={staff.name}
                                                         onChange={(e) => handleNameChange(staff.id, e.target.value)}
                                                         className="w-full px-3.5 py-2 text-sm font-medium rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-pumaGreen transition"
@@ -690,7 +687,7 @@
 
                                             <div className="p-3 border-b border-slate-200/60 bg-slate-100/50 flex items-center justify-between">
                                                 <span className="text-[10px] font-extrabold tracking-wider text-slate-500 uppercase">
-                                                    RÚBRICA {staff.role} ({currentCriteria.length} PREGUNTAS)
+                                                    RÚBRICA {roleBadgeText.toUpperCase()} ({currentCriteria.length} PREGUNTAS)
                                                 </span>
                                                 <span className="text-xs font-semibold text-slate-500">{stats.applicableCount} aplicables</span>
                                             </div>
@@ -759,20 +756,20 @@
 
                                 <div className="grid grid-cols-2 gap-3 pt-2 no-print">
                                     <button
-                                        onClick={() => handleAddStaff('PISTERO')}
+                                        onClick={() => handleAddStaff('AGENTE_PISTA')}
                                         type="button"
                                         className="py-3 border-2 border-dashed border-pumaGreen/60 hover:border-pumaGreen text-pumaGreen font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition hover:bg-pumaGreen/5 active:scale-[0.99]"
                                     >
                                         <i className="fa-solid fa-plus text-xs"></i>
-                                        Pistero
+                                        Agente de Pista
                                     </button>
                                     <button
-                                        onClick={() => handleAddStaff('TENDERO')}
+                                        onClick={() => handleAddStaff('AGENTE_TIENDA')}
                                         type="button"
                                         className="py-3 border-2 border-dashed border-amber-700/60 hover:border-amber-700 text-amber-800 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition hover:bg-amber-50 active:scale-[0.99]"
                                     >
                                         <i className="fa-solid fa-plus text-xs"></i>
-                                        Tendero (Super 7)
+                                        Agente de Tienda
                                     </button>
                                 </div>
                             </div>
@@ -839,13 +836,11 @@
                             </div>
 
                             <div className="p-5 space-y-5">
-                                {/* BANNER DE RESULTADO GLOBAL CON COLOR Y PORCENTAJE GRANDE */}
                                 <div className={`rounded-2xl p-6 text-center shadow-sm transition-all ${globalRatingConfig.containerClass}`}>
                                     <p className="text-[10px] font-bold tracking-widest uppercase mb-1 opacity-90">
                                         PUNTUACIÓN GLOBAL COMBINADA
                                     </p>
                                     
-                                    {/* PORCENTAJE DESTACADO */}
                                     <div className="text-5xl md:text-6xl font-black my-2 tracking-tight">
                                         {globalPercentage}%
                                     </div>
@@ -861,22 +856,22 @@
                                     </div>
                                 </div>
 
-                                {/* RESUMEN POR COLABORADOR */}
                                 <div>
                                     <h4 className="text-xs font-bold tracking-wider text-slate-400 uppercase mb-2">RESUMEN POR COLABORADOR</h4>
                                     <div className="divide-y divide-slate-100 border-t border-b border-slate-100">
                                         {staffList.map((s, idx) => {
                                             const stats = calculateStaffStats(s);
                                             const rating = getRatingLevelConfig(stats.percentage);
+                                            const roleDisplay = s.role === 'AGENTE_TIENDA' ? 'Agente Tienda' : 'Agente Pista';
                                             return (
                                                 <div key={s.id} className="py-2.5 flex items-center justify-between text-sm">
                                                     <div className="flex items-center gap-2">
                                                         <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${
-                                                            s.role === 'TENDERO' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
+                                                            s.role === 'AGENTE_TIENDA' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
                                                         }`}>
-                                                            {s.role}
+                                                            {roleDisplay}
                                                         </span>
-                                                        <span className="font-semibold text-slate-700">{s.name.trim() || `${s.role} ${idx + 1}`}</span>
+                                                        <span className="font-semibold text-slate-700">{s.name.trim() || `${roleDisplay} ${idx + 1}`}</span>
                                                     </div>
                                                     <div className="flex items-center gap-2">
                                                         <span className="font-extrabold text-slate-800">{stats.percentage}%</span>
@@ -890,7 +885,6 @@
                                     </div>
                                 </div>
 
-                                {/* CRITERIOS DE RANGO Y COLOR */}
                                 <div className="pt-2">
                                     <h4 className="text-[10px] font-bold tracking-wider text-slate-400 uppercase mb-2">ESCALA Y COLORES DE CALIFICACIÓN</h4>
                                     <div className="grid grid-cols-2 gap-2 text-xs font-medium text-slate-600">
