@@ -66,9 +66,8 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState } = React;
+        const { useState, useRef, useEffect } = React;
 
-        // Rúbrica para Agentes de Pista (Pista)
         const PISTERO_CRITERIA = [
             {
                 id: 1,
@@ -112,7 +111,6 @@
             }
         ];
 
-        // Rúbrica para Agentes de Tienda (Super 7)
         const TENDERO_CRITERIA = [
             {
                 id: 1,
@@ -206,6 +204,96 @@
             };
         };
 
+        // Componente de Lienzo de Firma Táctil
+        function SignaturePad({ onSave }) {
+            const canvasRef = useRef(null);
+            const [isDrawing, setIsDrawing] = useState(false);
+
+            useEffect(() => {
+                const canvas = canvasRef.current;
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                ctx.strokeStyle = '#0f172a';
+                ctx.lineWidth = 2.5;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+            }, []);
+
+            const getPos = (e, canvas) => {
+                const rect = canvas.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                return {
+                    x: clientX - rect.left,
+                    y: clientY - rect.top
+                };
+            };
+
+            const startDrawing = (e) => {
+                e.preventDefault();
+                const canvas = canvasRef.current;
+                const ctx = canvas.getContext('2d');
+                const pos = getPos(e, canvas);
+                setIsDrawing(true);
+                ctx.beginPath();
+                ctx.moveTo(pos.x, pos.y);
+            };
+
+            const draw = (e) => {
+                if (!isDrawing) return;
+                e.preventDefault();
+                const canvas = canvasRef.current;
+                const ctx = canvas.getContext('2d');
+                const pos = getPos(e, canvas);
+                ctx.lineTo(pos.x, pos.y);
+                ctx.stroke();
+            };
+
+            const stopDrawing = () => {
+                if (!isDrawing) return;
+                setIsDrawing(false);
+                const canvas = canvasRef.current;
+                onSave(canvas.toDataURL('image/png'));
+            };
+
+            const clearCanvas = () => {
+                const canvas = canvasRef.current;
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                onSave(null);
+            };
+
+            return (
+                <div className="space-y-1.5">
+                    <div className="border-2 border-dashed border-slate-300 rounded-xl bg-white overflow-hidden touch-none relative shadow-inner">
+                        <canvas
+                            ref={canvasRef}
+                            width={340}
+                            height={130}
+                            className="w-full h-[120px] cursor-crosshair block"
+                            onMouseDown={startDrawing}
+                            onMouseMove={draw}
+                            onMouseUp={stopDrawing}
+                            onMouseLeave={stopDrawing}
+                            onTouchStart={startDrawing}
+                            onTouchMove={draw}
+                            onTouchEnd={stopDrawing}
+                        />
+                        <span className="absolute bottom-1 right-2 text-[9px] text-slate-400 pointer-events-none font-medium">Firme aquí con el dedo o mouse</span>
+                    </div>
+                    <div className="flex justify-end">
+                        <button
+                            type="button"
+                            onClick={clearCanvas}
+                            className="text-[11px] font-bold text-rose-600 hover:text-rose-800 flex items-center gap-1 bg-rose-50 hover:bg-rose-100 px-2.5 py-1 rounded-lg transition"
+                        >
+                            <i className="fa-solid fa-eraser"></i> Limpiar firma
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
         function App() {
             const [stationData, setStationData] = useState({
                 stationName: '',
@@ -228,7 +316,9 @@
                 general: '',
                 maintenance: '',
                 security: '',
-                managerSignerName: ''
+                managerSignerName: '',
+                coachSignature: null,
+                managerSignature: null
             });
 
             const handleAddStaff = (role) => {
@@ -489,44 +579,48 @@
                 doc.setFont("helvetica", "normal");
                 doc.text(obsSeg, 14, startY + 4.5, { maxWidth: 182 });
 
-                // --- RECUADROS DE FIRMAS DIGITALES EN EL PDF ---
+                // --- FIRMAS DIGITALES EN EL PDF ---
                 startY += 24;
                 doc.setFont("helvetica", "bold");
                 doc.setFontSize(10);
                 doc.text("FIRMAS DIGITALES DE VALIDACIÓN Y CONFORMIDAD", 14, startY);
 
                 startY += 5;
-                // Recuadro Capacitador (Izquierda)
+                // Caja Capacitador
                 doc.setDrawColor(180, 180, 180);
                 doc.setFillColor(250, 250, 250);
-                doc.roundedRect(14, startY, 88, 30, 2, 2, 'FD');
-                doc.setFontSize(7.5);
-                doc.setTextColor(110, 110, 110);
-                doc.text("FIRMA DIGITAL - CAPACITADOR", 18, startY + 6);
-                doc.setFont("helvetica", "bold");
-                doc.setFontSize(8.5);
-                doc.setTextColor(30, 30, 30);
-                doc.text(`${evaluador}`, 18, startY + 18);
-                doc.setFont("helvetica", "normal");
+                doc.roundedRect(14, startY, 88, 34, 2, 2, 'FD');
                 doc.setFontSize(7);
-                doc.setTextColor(0, 122, 61); // Verde Puma
-                doc.text("✓ Validado digitalmente por Coach", 18, startY + 24);
+                doc.setTextColor(110, 110, 110);
+                doc.text("FIRMA DIGITAL - CAPACITADOR / COACH", 18, startY + 5);
+                
+                if (stationObs.coachSignature) {
+                    try {
+                        doc.addImage(stationObs.coachSignature, 'PNG', 24, startY + 7, 68, 18);
+                    } catch (e) { }
+                }
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(8);
+                doc.setTextColor(30, 30, 30);
+                doc.text(`${evaluador}`, 18, startY + 30);
 
-                // Recuadro Encargado (Derecha)
+                // Caja Encargado
                 doc.setDrawColor(180, 180, 180);
                 doc.setFillColor(250, 250, 250);
-                doc.roundedRect(108, startY, 88, 30, 2, 2, 'FD');
-                doc.setFontSize(7.5);
-                doc.setTextColor(110, 110, 110);
-                doc.text("FIRMA DIGITAL - ENCARGADO / GERENTE", 112, startY + 6);
-                doc.setFont("helvetica", "bold");
-                doc.setFontSize(8.5);
-                doc.setTextColor(30, 30, 30);
-                doc.text(`${managerSigner}`, 112, startY + 18);
-                doc.setFont("helvetica", "normal");
+                doc.roundedRect(108, startY, 88, 34, 2, 2, 'FD');
                 doc.setFontSize(7);
-                doc.setTextColor(0, 122, 61); // Verde Puma
-                doc.text("✓ Aceptado en conformidad por Encargado", 112, startY + 24);
+                doc.setTextColor(110, 110, 110);
+                doc.text("FIRMA DIGITAL - ENCARGADO / GERENTE", 112, startY + 5);
+
+                if (stationObs.managerSignature) {
+                    try {
+                        doc.addImage(stationObs.managerSignature, 'PNG', 118, startY + 7, 68, 18);
+                    } catch (e) { }
+                }
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(8);
+                doc.setTextColor(30, 30, 30);
+                doc.text(`${managerSigner}`, 112, startY + 30);
 
                 doc.setFontSize(7);
                 doc.setTextColor(120, 120, 120);
@@ -793,13 +887,13 @@
                             </div>
                         </div>
 
-                        {/* SECTION 3: OBSERVACIONES Y FIRMAS DIGITALES */}
+                        {/* SECTION 3: OBSERVACIONES Y FIRMAS DIGITALES TÁCTILES */}
                         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden print-card">
                             <div className="p-5 border-b border-slate-100 flex items-start gap-3">
                                 <span className="w-7 h-7 rounded-lg bg-pumaGreen text-white font-bold flex items-center justify-center text-sm shrink-0">3</span>
                                 <div>
                                     <h2 className="text-lg font-bold text-slate-800 leading-tight">Observaciones de Estación / Tienda y Firmas</h2>
-                                    <p className="text-xs text-slate-500 mt-0.5">Hallazgos generales y recuadros de firma digital.</p>
+                                    <p className="text-xs text-slate-500 mt-0.5">Hallazgos generales y firmas digitales táctiles.</p>
                                 </div>
                             </div>
                             <div className="p-5 space-y-4">
@@ -845,35 +939,28 @@
                                     />
                                 </div>
 
-                                {/* RECUADROS DE FIRMAS DIGITALES */}
-                                <div className="pt-3 border-t border-slate-100">
-                                    <label className="block text-xs font-bold text-slate-800 mb-2 uppercase tracking-wider">Recuadros de Firma Digital</label>
+                                {/* LIENZOS DE FIRMAS TÁCTILES */}
+                                <div className="pt-3 border-t border-slate-100 space-y-4">
+                                    <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">Recuadros de Firma Digital Táctil</label>
+                                    
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        
-                                        {/* Firma Capacitador / Coach */}
-                                        <div className="bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl p-4 text-center">
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">Firma Digital · Capacitador / Coach</p>
-                                            <div className="h-16 flex items-center justify-center border-b border-slate-300 mb-2">
-                                                <span className="text-xs font-semibold text-pumaGreen italic">
-                                                    {stationData.coachName ? `✓ Validado por: ${stationData.coachName}` : 'Pendiente de firma'}
-                                                </span>
+                                        {/* Firma Capacitador */}
+                                        <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-bold text-slate-700">Firma Capacitador / Coach</span>
+                                                <span className="text-[11px] text-slate-500 font-medium">{stationData.coachName || "Coach / Evaluador"}</span>
                                             </div>
-                                            <p className="text-xs font-bold text-slate-800">{stationData.coachName || "Coach / Evaluador"}</p>
-                                            <p className="text-[10px] text-slate-500">Coach / Evaluador Puma Energy</p>
+                                            <SignaturePad onSave={(img) => setStationObs({...stationObs, coachSignature: img})} />
                                         </div>
 
-                                        {/* Firma Encargado / Receptor */}
-                                        <div className="bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl p-4 text-center">
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">Firma Digital · Encargado / Receptor</p>
-                                            <div className="h-16 flex items-center justify-center border-b border-slate-300 mb-2">
-                                                <span className="text-xs font-semibold text-pumaGreen italic">
-                                                    {stationObs.managerSignerName ? `✓ Conforme por: ${stationObs.managerSignerName}` : 'Pendiente de firma'}
-                                                </span>
+                                        {/* Firma Encargado */}
+                                        <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-bold text-slate-700">Firma Encargado / Receptor</span>
+                                                <span className="text-[11px] text-slate-500 font-medium">{stationObs.managerSignerName || "Gerente Estación"}</span>
                                             </div>
-                                            <p className="text-xs font-bold text-slate-800">{stationObs.managerSignerName || "Encargado / Gerente"}</p>
-                                            <p className="text-[10px] text-slate-500">Receptor / Validador Estación</p>
+                                            <SignaturePad onSave={(img) => setStationObs({...stationObs, managerSignature: img})} />
                                         </div>
-
                                     </div>
                                 </div>
 
