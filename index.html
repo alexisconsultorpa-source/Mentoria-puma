@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mentoría Puma - Evaluación Pisteros y Tenderos Super 7.</title>
+    <title>Mentoría Puma - Evaluación Pista y Super 7.</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- React & ReactDOM CDNs -->
@@ -216,11 +216,11 @@
                 evaluationDate: new Date().toISOString().split('T')[0]
             });
 
-            // Lista de colaboradores evaluados (pisteros y tenderos)
+            // Lista de colaboradores evaluados (pista y tienda)
             const [staffList, setStaffList] = useState([
                 {
                     id: 1,
-                    role: 'PISTERO', // 'PISTERO' | 'TENDERO'
+                    role: 'PISTA', // 'PISTA' | 'TIENDA'
                     name: '',
                     scores: {}, // guarda valores numéricos (1-4) o 'NA'
                     coachNotes: ''
@@ -263,7 +263,7 @@
                 setStaffList(staffList.map(s => s.id === staffId ? { ...s, coachNotes } : s));
             };
 
-            // Cálculo individual de colaborador (pistero o tendero)
+            // Cálculo individual de colaborador (pista o tienda)
             const calculateStaffStats = (staff) => {
                 const criteriaList = staff.role === 'TENDERO' ? TENDERO_CRITERIA : PISTERO_CRITERIA;
                 let applicableCount = 0;
