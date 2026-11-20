@@ -326,7 +326,9 @@
                 const handleClickOutside = (event) => {
                     if (containerRef.current && !containerRef.current.contains(event.target)) {
                         setIsOpen(false);
-                        validateAndCommit(query);
+                        if (query.trim() !== '') {
+                            validateAndCommit(query);
+                        }
                     }
                 };
                 document.addEventListener('mousedown', handleClickOutside);
@@ -385,13 +387,16 @@
                                 setInvalidWarning(false);
                             }}
                             onChange={(e) => {
-                                setQuery(e.target.value);
+                                const nextVal = e.target.value;
+                                setQuery(nextVal);
                                 setIsOpen(true);
                                 setInvalidWarning(false);
                                 const exact = options.find(
-                                    (opt) => normalize(opt) === normalize(e.target.value)
+                                    (opt) => normalize(opt) === normalize(nextVal)
                                 );
-                                onChange(exact || '');
+                                if (exact) {
+                                    onChange(exact);
+                                }
                             }}
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
@@ -926,14 +931,18 @@
                                     <StationSearchSelect
                                         value={stationData.stationName}
                                         options={STATION_OPTIONS}
-                                        onChange={(val) => setStationData({ ...stationData, stationName: val })}
+                                        onChange={(val) => setStationData((prev) => ({ ...prev, stationName: val }))}
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-semibold text-slate-700 mb-1">Nombre del Coach / Evaluador</label>
+                                    <label htmlFor="coach-select" className="block text-xs font-semibold text-slate-700 mb-1">Nombre del Coach / Evaluador</label>
                                     <select
+                                        id="coach-select"
                                         value={stationData.coachName}
-                                        onChange={(e) => setStationData({ ...stationData, coachName: e.target.value })}
+                                        onChange={(e) => {
+                                            const selectedCoach = e.target.value;
+                                            setStationData((prev) => ({ ...prev, coachName: selectedCoach }));
+                                        }}
                                         className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-pumaGreen transition"
                                     >
                                         <option value="">Seleccione un Coach / Evaluador</option>
@@ -948,7 +957,7 @@
                                         type="text"
                                         placeholder="Nombre del encargado de la estación/tienda"
                                         value={stationData.supervisorName}
-                                        onChange={(e) => setStationData({...stationData, supervisorName: e.target.value})}
+                                        onChange={(e) => setStationData((prev) => ({ ...prev, supervisorName: e.target.value }))}
                                         className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pumaGreen transition"
                                     />
                                 </div>
@@ -957,7 +966,7 @@
                                     <input 
                                         type="date"
                                         value={stationData.evaluationDate}
-                                        onChange={(e) => setStationData({...stationData, evaluationDate: e.target.value})}
+                                        onChange={(e) => setStationData((prev) => ({ ...prev, evaluationDate: e.target.value }))}
                                         className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pumaGreen transition"
                                     />
                                 </div>
