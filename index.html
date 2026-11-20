@@ -70,6 +70,101 @@
     <script type="text/babel">
         const { useState, useRef, useEffect } = React;
 
+        const COACH_OPTIONS = [
+            "Alexis León",
+            "Gabriel Vergara"
+        ];
+
+        const STATION_OPTIONS = [
+            "Aeropuerto",
+            "Aguadulce OdGo",
+            "Albrook",
+            "Algarrobos 1",
+            "Algarrobos 2",
+            "Antón",
+            "Arboleda",
+            "Atalaya",
+            "Atlas",
+            "Autopista",
+            "Bethania",
+            "Bugaba",
+            "Burunga",
+            "Capira",
+            "Cativa",
+            "Centenial",
+            "Channis",
+            "Chitre",
+            "Chorrera OdGo",
+            "Coquito",
+            "Coronado",
+            "Cuatro Altos",
+            "Cubita",
+            "Cuervito",
+            "Curundu",
+            "Dana",
+            "David Central",
+            "David Vía Aeropuerto",
+            "Dorada Parck",
+            "Eddi",
+            "El bosque",
+            "El coco",
+            "El Roble",
+            "Espave",
+            "Frontera",
+            "Frontera 2",
+            "Hacienda santa fe",
+            "Hato montaña",
+            "Hipódromo",
+            "Interboquete",
+            "Internacional",
+            "Juan díaz",
+            "La Chorrera",
+            "La Ermita",
+            "La mitra",
+            "La riviera",
+            "Las américas",
+            "Las Mendozas",
+            "Llano Bonito",
+            "Locería",
+            "Los pueblos",
+            "Mama Oly",
+            "Mareasa Vía Rápida",
+            "Milla 1",
+            "Milla 8",
+            "Morelos",
+            "Nogales",
+            "Panamá",
+            "Panamá Norte",
+            "Parita",
+            "Penonomé",
+            "Perejil",
+            "Plaza el sol",
+            "Porta Norte",
+            "Puma Arraijan",
+            "Rodman",
+            "Sabanitas",
+            "Sahary",
+            "Santa Cruz",
+            "Santa Marta",
+            "Santiago",
+            "Speedway",
+            "Tierras Altas",
+            "Torremolinos",
+            "Trébol",
+            "Tumba Muerto",
+            "Urraca",
+            "Vacamonte",
+            "Vacamonte 2",
+            "Vía Argentina",
+            "Vía Bolivar",
+            "Vía porras",
+            "Villa la fuente",
+            "Vista alegre",
+            "Volcán",
+            "West garden",
+            "Zona libre"
+        ];
+
         const PISTERO_CRITERIA = [
             {
                 id: 1,
@@ -111,7 +206,6 @@
                 title: "08  Evaluación Puma Teams",
                 description: "Hace un resumen verbal del último curso de puma teams y lo aprendido."
             },
-            
             {
                 id: 9,
                 title: "09  Área de Trabajo",
@@ -216,6 +310,146 @@
                 pdfTextRGB: [136, 19, 55]
             };
         };
+
+        // Selector de Estación con búsqueda rápida y validación estricta de lista
+        function StationSearchSelect({ value, onChange, options }) {
+            const [query, setQuery] = useState(value || '');
+            const [isOpen, setIsOpen] = useState(false);
+            const [invalidWarning, setInvalidWarning] = useState(false);
+            const containerRef = useRef(null);
+
+            useEffect(() => {
+                setQuery(value || '');
+            }, [value]);
+
+            useEffect(() => {
+                const handleClickOutside = (event) => {
+                    if (containerRef.current && !containerRef.current.contains(event.target)) {
+                        setIsOpen(false);
+                        validateAndCommit(query);
+                    }
+                };
+                document.addEventListener('mousedown', handleClickOutside);
+                return () => document.removeEventListener('mousedown', handleClickOutside);
+            }, [query]);
+
+            const normalize = (str) =>
+                str
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .toLowerCase()
+                    .trim();
+
+            const filteredOptions = options.filter((opt) =>
+                normalize(opt).includes(normalize(query))
+            );
+
+            const validateAndCommit = (text) => {
+                const trimmed = text.trim();
+                if (!trimmed) {
+                    onChange('');
+                    setQuery('');
+                    setInvalidWarning(false);
+                    return;
+                }
+                const exactMatch = options.find(
+                    (opt) => normalize(opt) === normalize(trimmed)
+                );
+                if (exactMatch) {
+                    setQuery(exactMatch);
+                    onChange(exactMatch);
+                    setInvalidWarning(false);
+                } else {
+                    setQuery('');
+                    onChange('');
+                    setInvalidWarning(true);
+                }
+            };
+
+            const handleSelectOption = (opt) => {
+                setQuery(opt);
+                onChange(opt);
+                setInvalidWarning(false);
+                setIsOpen(false);
+            };
+
+            return (
+                <div ref={containerRef} className="relative">
+                    <div className="relative">
+                        <input
+                            type="text"
+                            placeholder="Escriba para buscar y seleccione una estación..."
+                            value={query}
+                            onFocus={() => {
+                                setIsOpen(true);
+                                setInvalidWarning(false);
+                            }}
+                            onChange={(e) => {
+                                setQuery(e.target.value);
+                                setIsOpen(true);
+                                setInvalidWarning(false);
+                                const exact = options.find(
+                                    (opt) => normalize(opt) === normalize(e.target.value)
+                                );
+                                onChange(exact || '');
+                            }}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    if (filteredOptions.length === 1) {
+                                        handleSelectOption(filteredOptions[0]);
+                                    } else {
+                                        validateAndCommit(query);
+                                        setIsOpen(false);
+                                    }
+                                } else if (e.key === 'Escape') {
+                                    setIsOpen(false);
+                                }
+                            }}
+                            className={`w-full px-3.5 py-2.5 pr-9 text-sm rounded-xl border focus:outline-none focus:ring-2 transition ${
+                                invalidWarning
+                                    ? 'border-rose-400 focus:ring-rose-500 bg-rose-50/40'
+                                    : 'border-slate-200 focus:ring-pumaGreen bg-white'
+                            }`}
+                        />
+                        <i className="fa-solid fa-magnifying-glass text-slate-400 text-xs absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+                    </div>
+
+                    {invalidWarning && (
+                        <p className="text-[11px] text-rose-600 font-semibold mt-1">
+                            Solo se admiten estaciones de la lista oficial. Seleccione una opción válida.
+                        </p>
+                    )}
+
+                    {isOpen && (
+                        <div className="absolute z-30 mt-1 w-full max-h-56 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-lg divide-y divide-slate-100">
+                            {filteredOptions.length > 0 ? (
+                                filteredOptions.map((opt) => (
+                                    <button
+                                        key={opt}
+                                        type="button"
+                                        onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            handleSelectOption(opt);
+                                        }}
+                                        className={`w-full text-left px-3.5 py-2 text-sm hover:bg-pumaLightGreen hover:text-pumaDarkGreen transition flex items-center justify-between ${
+                                            value === opt ? 'bg-pumaLightGreen text-pumaDarkGreen font-bold' : 'text-slate-700'
+                                        }`}
+                                    >
+                                        <span>{opt}</span>
+                                        {value === opt && <i className="fa-solid fa-check text-xs text-pumaGreen"></i>}
+                                    </button>
+                                ))
+                            ) : (
+                                <div className="px-3.5 py-3 text-xs text-slate-500">
+                                    No se encontraron estaciones coincidentes en la lista.
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            );
+        }
 
         // Componente de Lienzo de Firma Táctil
         function SignaturePad({ onSave }) {
@@ -689,23 +923,24 @@
                             <div className="p-5 space-y-4">
                                 <div>
                                     <label className="block text-xs font-semibold text-slate-700 mb-1">Nombre de la Estación / Tienda Super 7</label>
-                                    <input 
-                                        type="text"
-                                        placeholder="Ej. Puma y Super 7 Las Américas"
+                                    <StationSearchSelect
                                         value={stationData.stationName}
-                                        onChange={(e) => setStationData({...stationData, stationName: e.target.value})}
-                                        className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pumaGreen transition"
+                                        options={STATION_OPTIONS}
+                                        onChange={(val) => setStationData({ ...stationData, stationName: val })}
                                     />
                                 </div>
                                 <div>
                                     <label className="block text-xs font-semibold text-slate-700 mb-1">Nombre del Coach / Evaluador</label>
-                                    <input 
-                                        type="text"
-                                        placeholder="Nombre del evaluador"
+                                    <select
                                         value={stationData.coachName}
-                                        onChange={(e) => setStationData({...stationData, coachName: e.target.value})}
-                                        className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-pumaGreen transition"
-                                    />
+                                        onChange={(e) => setStationData({ ...stationData, coachName: e.target.value })}
+                                        className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-pumaGreen transition"
+                                    >
+                                        <option value="">Seleccione un Coach / Evaluador</option>
+                                        {COACH_OPTIONS.map((coach) => (
+                                            <option key={coach} value={coach}>{coach}</option>
+                                        ))}
+                                    </select>
                                 </div>
                                 <div>
                                     <label className="block text-xs font-semibold text-slate-700 mb-1">Nombre del Supervisor / Gerente de Tienda</label>
