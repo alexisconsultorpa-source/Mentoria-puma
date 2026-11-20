@@ -158,6 +158,7 @@
             "Vía Argentina",
             "Vía Bolivar",
             "Vía porras",
+            "Villa July",
             "Villa la fuente",
             "Vista alegre",
             "Volcán",
@@ -311,12 +312,14 @@
             };
         };
 
-        // Selector de Estación con búsqueda rápida y validación estricta de lista
-        function StationSearchSelect({ value, onChange, options }) {
+        // Selector con búsqueda rápida y validación estricta de lista (usado para Estaciones y Coaches)
+        function SearchableListSelect({ value, onChange, options, placeholder, strictMessage }) {
             const [query, setQuery] = useState(value || '');
             const [isOpen, setIsOpen] = useState(false);
             const [invalidWarning, setInvalidWarning] = useState(false);
             const containerRef = useRef(null);
+            const queryRef = useRef(query);
+            queryRef.current = query;
 
             useEffect(() => {
                 setQuery(value || '');
@@ -326,14 +329,28 @@
                 const handleClickOutside = (event) => {
                     if (containerRef.current && !containerRef.current.contains(event.target)) {
                         setIsOpen(false);
-                        if (query.trim() !== '') {
-                            validateAndCommit(query);
+                        const currentText = queryRef.current.trim();
+                        if (currentText !== '') {
+                            const exactMatch = options.find(
+                                (opt) => normalize(opt) === normalize(currentText)
+                            );
+                            if (exactMatch) {
+                                setQuery(exactMatch);
+                                onChange(exactMatch);
+                                setInvalidWarning(false);
+                            } else {
+                                setQuery(value || '');
+                                setInvalidWarning(true);
+                            }
+                        } else {
+                            onChange('');
+                            setInvalidWarning(false);
                         }
                     }
                 };
                 document.addEventListener('mousedown', handleClickOutside);
                 return () => document.removeEventListener('mousedown', handleClickOutside);
-            }, [query]);
+            }, [options, onChange, value]);
 
             const normalize = (str) =>
                 str
@@ -362,8 +379,7 @@
                     onChange(exactMatch);
                     setInvalidWarning(false);
                 } else {
-                    setQuery('');
-                    onChange('');
+                    setQuery(value || '');
                     setInvalidWarning(true);
                 }
             };
@@ -380,7 +396,7 @@
                     <div className="relative">
                         <input
                             type="text"
-                            placeholder="Escriba para buscar y seleccione una estación..."
+                            placeholder={placeholder}
                             value={query}
                             onFocus={() => {
                                 setIsOpen(true);
@@ -396,6 +412,8 @@
                                 );
                                 if (exact) {
                                     onChange(exact);
+                                } else if (nextVal.trim() === '') {
+                                    onChange('');
                                 }
                             }}
                             onKeyDown={(e) => {
@@ -422,7 +440,7 @@
 
                     {invalidWarning && (
                         <p className="text-[11px] text-rose-600 font-semibold mt-1">
-                            Solo se admiten estaciones de la lista oficial. Seleccione una opción válida.
+                            {strictMessage}
                         </p>
                     )}
 
@@ -447,7 +465,7 @@
                                 ))
                             ) : (
                                 <div className="px-3.5 py-3 text-xs text-slate-500">
-                                    No se encontraron estaciones coincidentes en la lista.
+                                    No se encontraron coincidencias en la lista.
                                 </div>
                             )}
                         </div>
@@ -572,6 +590,14 @@
                 coachSignature: null,
                 managerSignature: null
             });
+
+            const handleStationChange = (val) => {
+                setStationData((prev) => ({ ...prev, stationName: val }));
+            };
+
+            const handleCoachChange = (val) => {
+                setStationData((prev) => ({ ...prev, coachName: val }));
+            };
 
             const handleAddStaff = (role) => {
                 setStaffList([
@@ -928,28 +954,23 @@
                             <div className="p-5 space-y-4">
                                 <div>
                                     <label className="block text-xs font-semibold text-slate-700 mb-1">Nombre de la Estación / Tienda Super 7</label>
-                                    <StationSearchSelect
+                                    <SearchableListSelect
                                         value={stationData.stationName}
                                         options={STATION_OPTIONS}
-                                        onChange={(val) => setStationData((prev) => ({ ...prev, stationName: val }))}
+                                        onChange={handleStationChange}
+                                        placeholder="Escriba para buscar y seleccione una estación..."
+                                        strictMessage="Solo se admiten estaciones de la lista oficial. Seleccione una opción válida."
                                     />
                                 </div>
                                 <div>
-                                    <label htmlFor="coach-select" className="block text-xs font-semibold text-slate-700 mb-1">Nombre del Coach / Evaluador</label>
-                                    <select
-                                        id="coach-select"
+                                    <label className="block text-xs font-semibold text-slate-700 mb-1">Nombre del Coach / Evaluador</label>
+                                    <SearchableListSelect
                                         value={stationData.coachName}
-                                        onChange={(e) => {
-                                            const selectedCoach = e.target.value;
-                                            setStationData((prev) => ({ ...prev, coachName: selectedCoach }));
-                                        }}
-                                        className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-pumaGreen transition"
-                                    >
-                                        <option value="">Seleccione un Coach / Evaluador</option>
-                                        {COACH_OPTIONS.map((coach) => (
-                                            <option key={coach} value={coach}>{coach}</option>
-                                        ))}
-                                    </select>
+                                        options={COACH_OPTIONS}
+                                        onChange={handleCoachChange}
+                                        placeholder="Escriba para buscar y seleccione un Coach..."
+                                        strictMessage="Solo se admiten coaches de la lista oficial. Seleccione una opción válida."
+                                    />
                                 </div>
                                 <div>
                                     <label className="block text-xs font-semibold text-slate-700 mb-1">Nombre del Supervisor / Gerente de Tienda</label>
